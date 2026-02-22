@@ -5,7 +5,7 @@ import os, logging, random, re, requests, asyncio, threading
 from flask import Flask, request
 from datetime import datetime, date, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters, ConversationHandler
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
 NASA_API_KEY   = os.environ.get("NASA_API_KEY",   "UXsg0T63ukdHkImo2VAejU46MHdnZdGgtgrlcQmE")
