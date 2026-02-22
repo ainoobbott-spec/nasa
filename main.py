@@ -997,6 +997,28 @@ def _run_loop(loop):
     asyncio.set_event_loop(loop)
     loop.run_forever()
 
+async def set_bot_descriptions(bot):
+    descriptions = {
+        "ru": "🚀 Твой проводник во Вселенную! Фото NASA, Марс, МКС, астероиды, живые данные о космической погоде и многое другое. 6 категорий, 50+ разделов.",
+        "en": "🚀 Your guide to the Universe! NASA photos, Mars, ISS, asteroids, live space weather data and much more. 6 categories, 50+ sections.",
+        "he": "🚀 המדריך שלך ליקום! תמונות NASA, מאדים, ISS, אסטרואידים, נתונים חיים ועוד. 6 קטגוריות, 50+ מדורים.",
+        "ar": "🚀 دليلك إلى الكون! صور NASA، المريخ، محطة الفضاء، الكويكبات، بيانات مباشرة والمزيد. 6 فئات، 50+ قسماً.",
+    }
+    short_descriptions = {
+        "ru": "NASA фото, МКС, астероиды и живые данные о космосе 🚀",
+        "en": "NASA photos, ISS, asteroids and live space data 🚀",
+        "he": "תמונות NASA, ISS, אסטרואידים ונתוני חלל חיים 🚀",
+        "ar": "صور NASA، محطة الفضاء، الكويكبات وبيانات الفضاء المباشرة 🚀",
+    }
+    try:
+        for lang_code, desc in descriptions.items():
+            await bot.set_my_description(description=desc, language_code=lang_code)
+        for lang_code, desc in short_descriptions.items():
+            await bot.set_my_short_description(short_description=desc, language_code=lang_code)
+        logger.info("✅ Bot descriptions set for all languages")
+    except Exception as e:
+        logger.error(f"Failed to set descriptions: {e}")
+
 async def setup_bot():
     global tg_app
     tg_app = Application.builder().token(TELEGRAM_TOKEN).build()
@@ -1011,6 +1033,7 @@ async def setup_bot():
         logger.info(f"✅ Webhook set: {wh}")
     else:
         logger.warning("⚠️  WEBHOOK_URL not set — webhook NOT registered!")
+    await set_bot_descriptions(tg_app.bot)
 
 def init_worker():
     """
