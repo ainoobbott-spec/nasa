@@ -59,17 +59,29 @@ def save_capsules(data):
 
 # ── TRANSLATIONS ──────────────────────────────────────────────────────────────
 CHANNELS_TEXT = {
-    "ru": "📢 *Наши каналы*\n\n📡 @your\\_channel\n💬 @your\\_group",
-    "en": "📢 *Our Channels*\n\n📡 @your\\_channel\n💬 @your\\_group",
-    "he": "📢 *הערוצים שלנו*\n\n📡 @your\\_channel\n💬 @your\\_group",
-    "ar": "📢 *قنواتنا*\n\n📡 @your\\_channel\n💬 @your\\_group",
+    "ru": ("📢 *Наши каналы*\n\n"
+           "📡 [Канал NASA Space Bot](https://t.me/cosmic41)\n"
+           "💬 [Группа — общение и вопросы](https://t.me/cosmic40)\n\n"
+           "🚀 Подписывайтесь, чтобы не пропустить запуски, фото и новости!"),
+    "en": ("📢 *Our Channels*\n\n"
+           "📡 [NASA Space Bot Channel](https://t.me/cosmic41)\n"
+           "💬 [Community Group](https://t.me/cosmic40)\n\n"
+           "🚀 Subscribe for launches, photos and space news!"),
+    "he": ("📢 *הערוצים שלנו*\n\n"
+           "📡 [ערוץ NASA Space Bot](https://t.me/cosmic41)\n"
+           "💬 [קבוצת קהילה](https://t.me/cosmic40)\n\n"
+           "🚀 הצטרפו לעדכונים על שיגורים, תמונות וחדשות!"),
+    "ar": ("📢 *قنواتنا*\n\n"
+           "📡 [قناة NASA Space Bot](https://t.me/cosmic41)\n"
+           "💬 [مجموعة المجتمع](https://t.me/cosmic40)\n\n"
+           "🚀 اشترك لمتابعة الإطلاقات والصور وأخبار الفضاء!"),
 }
 
 T = {
 "ru": {
     "choose_lang":"🌍 *Выберите язык / Choose language / בחרו שפה / اختر اللغة*",
     "lang_set":"🇷🇺 Язык: *Русский*",
-    "start_msg":"🚀 *NASA Space Bot* — твой проводник во Вселенную, {name}!\n\n*6 категорий, 50+ разделов* 👇",
+    "start_msg":"🚀 *NASA Space Bot* — твой проводник во Вселенную, {name}!\n\n*6 категорий, 50+ разделов* 👇\n\n📡 [Канал](https://t.me/cosmic41) | 💬 [Группа](https://t.me/cosmic40)",
     "main_menu":"🌠 *Главное меню:*", "choose_sec":"\n\nВыбери раздел 👇",
     "cat_photo":"📸 ФОТО И ГАЛЕРЕЯ", "cat_solarsys":"🪐 СОЛНЕЧНАЯ СИСТЕМА",
     "cat_deepspace":"🌌 ГЛУБОКИЙ КОСМОС", "cat_earth":"🌍 ЗЕМЛЯ И АТМОСФЕРА",
@@ -164,7 +176,7 @@ T = {
 "en": {
     "choose_lang":"🌍 *Choose language / Выберите язык / בחרו שפה / اختر اللغة*",
     "lang_set":"🇬🇧 Language: *English*",
-    "start_msg":"🚀 *NASA Space Bot* — your guide to the Universe, {name}!\n\n*6 categories, 50+ sections* 👇",
+    "start_msg":"🚀 *NASA Space Bot* — your guide to the Universe, {name}!\n\n*6 categories, 50+ sections* 👇\n\n📡 [Channel](https://t.me/cosmic41) | 💬 [Group](https://t.me/cosmic40)",
     "main_menu":"🌠 *Main Menu:*", "choose_sec":"\n\nChoose section 👇",
     "cat_photo":"📸 PHOTO & GALLERY", "cat_solarsys":"🪐 SOLAR SYSTEM",
     "cat_deepspace":"🌌 DEEP SPACE", "cat_earth":"🌍 EARTH & ATMOSPHERE",
@@ -974,6 +986,19 @@ async def iss_h(update, ctx):
         text=(f"🛸 *ISS — {ts}*\n\n🌍 `{lat:.4f}°` | 🌏 `{lon:.4f}°`\n"
               f"⚡ ~27,600 km/h  |  🏔 ~408 km\n\n👨‍🚀 Crew ({len(iss_crew)}):\n{crew_str}\n\n"
               f"[{tx(lang,'iss_map')}](https://www.google.com/maps?q={lat},{lon})")
+        iss_images=["ISS international space station orbit","ISS from earth telescope","space station earth view"]
+        try:
+            r=requests.get("https://images-api.nasa.gov/search",
+                params={"q":random.choice(iss_images),"media_type":"image","page_size":20},timeout=12)
+            items=[it for it in r.json().get("collection",{}).get("items",[]) if it.get("links")]
+            if items:
+                img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+                if img_url:
+                    await del_msg(q)
+                    await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
+                        caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"iss",ctx))
+                    return
+        except: pass
         await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"iss",ctx))
     except Exception as e:
         await safe_edit(q,f"{tx(lang,'err')} ISS: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
@@ -988,24 +1013,78 @@ async def exoplanets_h(update, ctx):
                f"   📅 {p['year']}  |  📏 {p['radius']}R🌍  |  🔄 {p['period']}d  |  📡 {p['dist_ly']}ly\n"
                f"   💡 _{note}_\n\n")
     text+="[🔗 NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu)"
+    exo_imgs=["exoplanet artist concept nasa","TRAPPIST-1 system nasa","Kepler exoplanet nasa",
+              "habitable zone planet artist","James Webb exoplanet atmosphere"]
+    try:
+        r=requests.get("https://images-api.nasa.gov/search",
+            params={"q":random.choice(exo_imgs),"media_type":"image","page_size":20},timeout=12)
+        items=[it for it in r.json().get("collection",{}).get("items",[]) if it.get("links")]
+        if items:
+            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            if img_url:
+                await del_msg(q)
+                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
+                    caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"exoplanets",ctx))
+                return
+    except: pass
     await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"exoplanets",ctx))
 
 async def spaceweather_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🌞...")
     try:
-        end=date.today().isoformat(); start=(date.today()-timedelta(days=7)).isoformat()
-        flares=nasa_req("/DONKI/FLR",{"startDate":start,"endDate":end}) or []
-        cmes=nasa_req("/DONKI/CME",{"startDate":start,"endDate":end}) or []
-        storms=nasa_req("/DONKI/GST",{"startDate":start,"endDate":end}) or []
-        text=f"🌞 *Space Weather (7d)*\n\n⚡ Flares: *{len(flares)}*\n"
-        for f in flares[-3:]: text+=f"   • {f.get('classType','?')} — {(f.get('peakTime') or '')[:16].replace('T',' ')}\n"
-        text+=f"\n🌊 CME: *{len(cmes)}*\n"
-        for c in cmes[-2:]: text+=f"   • {(c.get('startTime') or '')[:16].replace('T',' ')}\n"
-        text+=f"\n🧲 Storms: *{len(storms)}*\n"
-        for s in storms[-2:]:
-            kp_i=s.get("allKpIndex",[{}]); kp_v=kp_i[-1].get("kpIndex","?") if kp_i else "?"
-            text+=f"   • {(s.get('startTime') or '')[:16].replace('T',' ')}  Kp: *{kp_v}*\n"
-        text+="\n[NOAA](https://www.swpc.noaa.gov)"
+        kp_val, kp_time, kp_state = "?", "?", "?"
+        try:
+            r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=10); r.raise_for_status()
+            kp_data=r.json(); cur=kp_data[-1] if kp_data else {}
+            kp_val=cur.get("kp_index",cur.get("Kp","?")); kp_time=cur.get("time_tag","")[:16].replace("T"," ")
+            try:
+                kv=float(kp_val)
+                kp_state=("🟢 Calm" if kv<4 else "🟡 Minor" if kv<5 else "🟠 Moderate" if kv<6 else "🔴 Strong" if kv<8 else "🚨 Extreme")
+            except: kp_state="?"
+        except: pass
+        sw_speed, sw_density = "?", "?"
+        try:
+            r2=requests.get("https://services.swpc.noaa.gov/products/solar-wind/plasma-5-minute.json",timeout=10); r2.raise_for_status()
+            sw_data=r2.json(); sw_lat=sw_data[-1] if sw_data else []
+            if len(sw_lat)>2:
+                try: sw_speed=f"{float(sw_lat[2]):,.0f} km/s"
+                except: sw_speed=str(sw_lat[2])
+                try: sw_density=f"{float(sw_lat[1]):.2f} p/cm3"
+                except: sw_density=str(sw_lat[1])
+        except: pass
+        flare_cls, flare_flux = "?", "?"
+        try:
+            r3=requests.get("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",timeout=10); r3.raise_for_status()
+            xray=r3.json(); xl=xray[-1] if xray else {}
+            flux=xl.get("flux","?")
+            try:
+                fv=float(flux)
+                flare_cls=("X-class" if fv>=1e-4 else "M-class" if fv>=1e-5 else "C-class" if fv>=1e-6 else "B-class" if fv>=1e-7 else "A-class")
+                flare_flux=f"{fv:.2e} W/m2"
+            except: flare_cls="?"; flare_flux=str(flux)
+        except: pass
+        ssn = "?"
+        try:
+            r4=requests.get("https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json",timeout=10); r4.raise_for_status()
+            sc=r4.json(); ssn=sc[-1].get("smoothed_ssn",sc[-1].get("ssn","?")) if sc else "?"
+        except: pass
+        try: aurora_vis=("Equatorial" if float(str(kp_val))>=8 else "Mid-latitudes" if float(str(kp_val))>=6 else "Scandinavia/Canada" if float(str(kp_val))>=4 else "Polar only")
+        except: aurora_vis="Polar only"
+        text=(f"*Space Weather — Live*\n"
+              f"*Kp-index:* {kp_val} {kp_state}\n"
+              f"*Solar Wind:* {sw_speed} | {sw_density}\n"
+              f"*Flare class:* {flare_cls} ({flare_flux})\n"
+              f"*Sunspot #:* {ssn}\n\n"
+              f"Aurora: {aurora_vis}\n\n"
+              f"[NOAA SWPC](https://www.swpc.noaa.gov)")
+        try:
+            sun_url="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_0193.jpg"
+            await del_msg(q)
+            await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=sun_url,
+                caption=text[:1024], parse_mode="Markdown",
+                reply_markup=back_kb(lang,"spaceweather",ctx))
+            return
+        except: pass
         await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"spaceweather",ctx))
     except Exception as e:
         await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
@@ -1057,22 +1136,75 @@ async def meteors_h(update, ctx):
     for m in METEOR_SHOWERS:
         name=m["name"].get(lang,m["name"]["en"])
         text+=f"✨ *{name}* — {m['peak']}\n   ⚡ {m['speed']}  |  🌠 {m['rate']}  |  {m['parent']}\n\n"
+    text+="[🔗 AMS Meteor Calendar](https://www.amsmeteors.org/meteor-showers/meteor-shower-calendar/)"
+    meteor_imgs=["meteor shower long exposure night sky","perseid meteor shower","shooting star night sky nasa",
+                 "leonids meteor shower","geminids fireball"]
+    try:
+        r=requests.get("https://images-api.nasa.gov/search",
+            params={"q":random.choice(meteor_imgs),"media_type":"image","page_size":20},timeout=12)
+        items=[it for it in r.json().get("collection",{}).get("items",[]) if it.get("links")]
+        if items:
+            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            if img_url:
+                await del_msg(q)
+                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
+                    caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,ctx=ctx))
+                return
+    except: pass
     await safe_edit(q,text,reply_markup=back_kb(lang,ctx=ctx))
 
 async def planets_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     p=random.choice(PLANETS); fact=p["fact"].get(lang,p["fact"]["en"])
-    text=(f"🪐 *{p['name']}*\n\n📏 {p['radius']}  |  📡 {p['dist']}\n"
-          f"🔄 {p['period']}  |  🌅 {p['day']}\n🌡 {p['temp']}  |  🌙 {p['moons']}\n\n💡 *{fact}*")
-    await safe_edit(q,text,reply_markup=back_kb(lang,"planets",ctx))
+    text=(f"*{p['name']}*\n\n📏 {p['radius']}  |  📡 {p['dist']}\n"
+          f"🔄 {p['period']}  |  🌅 {p['day']}\n🌡 {p['temp']}  |  🌙 {p['moons']}\n\n💡 {fact}")
+    planet_queries = {
+        "☿ Mercury": ["mercury planet nasa","mercury messenger spacecraft"],
+        "♀ Venus": ["venus planet nasa","venus surface mariner"],
+        "🌍 Earth": ["earth from space nasa","earth blue marble"],
+        "♂ Mars": ["mars planet nasa","mars surface red"],
+        "♃ Jupiter": ["jupiter great red spot nasa","jupiter cassini"],
+        "♄ Saturn": ["saturn rings cassini nasa","saturn planet"],
+        "⛢ Uranus": ["uranus planet voyager nasa","uranus rings"],
+        "♆ Neptune": ["neptune planet voyager nasa","neptune blue planet"],
+    }
+    queries = planet_queries.get(p["name"], ["planet nasa"])
+    try:
+        r=requests.get("https://images-api.nasa.gov/search",
+            params={"q":random.choice(queries),"media_type":"image","page_size":20},timeout=12)
+        items=[it for it in r.json().get("collection",{}).get("items",[]) if it.get("links")]
+        if items:
+            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            if img_url:
+                await del_msg(q)
+                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
+                    caption=text[:1024],parse_mode="Markdown",reply_markup=action_kb(lang,"planets","btn_another",ctx))
+                return
+    except: pass
+    await safe_edit(q,text,reply_markup=action_kb(lang,"planets","btn_another",ctx))
 
 async def moon_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     emoji, idx, cycle_day, illum = get_moon_phase(date.today())
     phases=tx(lang,"moon_phases")
     phase_name=phases[idx] if isinstance(phases,list) else "?"
-    text=(f"{emoji} *Moon Phase*\n\n📅 {date.today()}\n🌙 *{phase_name}*\n"
-          f"💡 ~{illum}%  |  Day {cycle_day:.1f}/29.5")
+    text=(f"{emoji} *Moon Phase — {date.today()}*\n\n🌙 *{phase_name}*\n"
+          f"💡 ~{illum}%  |  Day {cycle_day:.1f}/29.5\n\n"
+          f"📸 Photo tip: ISO 100, f/11, 1/250s")
+    moon_images = ["moon surface nasa apollo","lunar crater full moon","moon high resolution nasa",
+                   "moon from space ISS","lunar surface close up"]
+    try:
+        r=requests.get("https://images-api.nasa.gov/search",
+            params={"q":random.choice(moon_images),"media_type":"image","page_size":20},timeout=12)
+        items=[it for it in r.json().get("collection",{}).get("items",[]) if it.get("links")]
+        if items:
+            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            if img_url:
+                await del_msg(q)
+                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
+                    caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"moon",ctx))
+                return
+    except: pass
     await safe_edit(q,text,reply_markup=back_kb(lang,"moon",ctx))
 
 async def telescopes_h(update, ctx):
@@ -1565,49 +1697,64 @@ async def unknown(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 # ── CALLBACK ROUTER ───────────────────────────────────────────────────────────
 IMG_MAP = {
     "epic": EARTH_Q, "gallery": GALLERY_Q,
-    "earth_night": ["earth at night city lights nasa","night lights satellite"],
-    "eclipse": ["solar eclipse nasa","lunar eclipse nasa","total eclipse"],
-    "jwst_gallery": ["James Webb telescope JWST","Webb deep field nebula"],
-    "moon_gallery": ["moon surface nasa","lunar crater apollo"],
-    "blue_marble": ["blue marble earth nasa","whole earth nasa"],
-    "ceres": ["Ceres Dawn nasa","Ceres bright spots"],
-    "pluto_close": ["Pluto New Horizons nasa"],
-    "nebulae": ["nebula hubble","eagle nebula","orion nebula"],
-    "deepspace": ["hubble deep field galaxy","james webb deep field"],
-    "sun": ["solar flare nasa SDO","sun corona"],
-    "aurora": ["aurora borealis ISS","northern lights nasa"],
-    "blackholes": ["black hole accretion disk nasa"],
-    "supernovae": ["supernova remnant hubble","crab nebula"],
-    "clusters": ["star cluster hubble","globular cluster"],
-    "comets": ["comet nasa hubble","comet NEOWISE"],
-    "history": ["apollo moon landing nasa","space shuttle launch"],
-    "giants": ["jupiter great red spot nasa","saturn rings cassini"],
-    "moons": ["europa moon jupiter nasa","titan saturn cassini","enceladus geysers"],
-    "missions": ["voyager spacecraft nasa","cassini saturn","perseverance rover"],
-    "nearstars": ["alpha centauri star","red dwarf star nasa"],
-    "pulsars": ["pulsar neutron star nasa","crab pulsar"],
-    "milkyway": ["milky way galaxy nasa","galactic center"],
-    "magnetosphere": ["earth magnetosphere nasa","Van Allen belts"],
-    "dwarfplanets": ["pluto new horizons nasa","ceres dawn nasa"],
-    "climate": ["arctic ice melt nasa","sea level rise satellite"],
-    "quasars": ["quasar nasa hubble","active galaxy nucleus"],
-    "cmb": ["cosmic microwave background Planck"],
-    "galaxy_collision": ["galaxy collision hubble","antennae galaxies"],
-    "star_formation": ["star formation nebula","pillars of creation"],
-    "cosmic_web": ["cosmic web filament simulation"],
-    "wildfires": ["wildfire satellite nasa","forest fire space"],
-    "ice_sheets": ["ice sheet antarctica nasa","arctic sea ice"],
-    "deforestation": ["deforestation amazon satellite"],
-    "night_lights": ["earth at night city lights nasa"],
-    "ocean_temp": ["sea surface temperature nasa"],
-    "volcanoes": ["volcano eruption space satellite"],
-    "hurricanes": ["hurricane from space satellite","tropical storm ISS"],
-    "spacewalks": ["spacewalk EVA astronaut ISS nasa"],
-    "lunar_missions": ["apollo moon mission","artemis moon nasa"],
-    "moon_landing_sites": ["apollo landing site moon","tranquility base"],
-    "rocket_engines": ["rocket engine nasa RS-25"],
-    "tornadoes": ["tornado from space satellite"],
-    "space_food": ["space food astronaut nasa ISS"],
+    "earth_night": ["earth at night city lights nasa","night lights satellite ISS","city lights from space"],
+    "eclipse": ["solar eclipse nasa","total eclipse corona","lunar eclipse blood moon","diamond ring solar eclipse"],
+    "jwst_gallery": ["James Webb JWST deep field","Webb nebula infrared","JWST carina nebula","Webb Pillars of Creation","James Webb galaxy cluster"],
+    "moon_gallery": ["moon surface nasa apollo","lunar crater full moon","moon from ISS nasa","lunar south pole crater"],
+    "blue_marble": ["blue marble earth nasa","whole earth from space","earth from moon apollo","earth deep space voyager"],
+    "ceres": ["Ceres Dawn nasa bright spots","Ceres dwarf planet surface","Ceres occator crater"],
+    "pluto_close": ["Pluto New Horizons nasa","Pluto heart feature","Pluto mountains nitrogen ice"],
+    "nebulae": ["nebula hubble","eagle nebula pillars","orion nebula hubble","carina nebula webb","helix nebula eye god"],
+    "deepspace": ["hubble deep field galaxy","james webb deep field","hubble ultra deep field","galaxy cluster hubble"],
+    "sun": ["solar flare nasa SDO","sun corona sdo","sunspot close up","solar prominence nasa"],
+    "aurora": ["aurora borealis ISS","northern lights nasa","aurora australis space","polar lights from orbit"],
+    "blackholes": ["black hole accretion disk nasa","M87 black hole image","black hole jet galaxy nasa"],
+    "supernovae": ["supernova remnant hubble","crab nebula pulsar","cassiopeia supernova nasa","supernova 1987A"],
+    "clusters": ["star cluster hubble","globular cluster omega centauri","pleiades star cluster","hercules cluster"],
+    "comets": ["comet nasa hubble","comet NEOWISE","comet 67P rosetta","comet tail sun"],
+    "history": ["apollo moon landing nasa","space shuttle launch","neil armstrong moon","saturn V launch apollo"],
+    "giants": ["jupiter great red spot nasa","saturn rings cassini","jupiter bands close up","saturn polar hexagon cassini"],
+    "moons": ["europa moon jupiter nasa","titan saturn cassini","enceladus geysers south pole","ganymede jwst"],
+    "missions": ["voyager spacecraft nasa","cassini saturn rings","perseverance rover nasa","new horizons pluto flyby"],
+    "nearstars": ["alpha centauri telescope","red dwarf star nasa","proxima centauri flare","barnard star"],
+    "pulsars": ["pulsar nebula nasa","crab pulsar hubble","vela pulsar jets","neutron star pulsar"],
+    "milkyway": ["milky way galaxy nasa","galactic center milky way","milky way arch long exposure"],
+    "magnetosphere": ["earth magnetosphere nasa","Van Allen belts radiation","aurora magnetosphere"],
+    "dwarfplanets": ["pluto new horizons nasa","ceres dawn nasa","haumea dwarf planet","eris kuiper belt"],
+    "climate": ["arctic ice melt nasa","sea level rise satellite","glacier retreat nasa","polar ice cap nasa"],
+    "quasars": ["quasar nasa hubble","active galactic nucleus jet","quasar 3C273 hubble","blazar nasa"],
+    "cmb": ["cosmic microwave background Planck","CMB temperature map","big bang afterglow nasa"],
+    "galaxy_collision": ["galaxy collision hubble","antennae galaxies hubble","mice galaxies merging","galaxy pair merger"],
+    "star_formation": ["star formation nebula","pillars of creation webb","stellar nursery hubble","protostar disk"],
+    "cosmic_web": ["cosmic web simulation","large scale structure universe","galaxy filament dark matter"],
+    "wildfires": ["wildfire satellite nasa","forest fire space view","california wildfire smoke ISS"],
+    "ice_sheets": ["ice sheet antarctica nasa","arctic sea ice extent","glacier calving nasa","greenland ice melt"],
+    "deforestation": ["deforestation amazon satellite","forest loss satellite","amazon river deforestation"],
+    "night_lights": ["earth at night city lights nasa","city lights ISS time lapse","europe night lights satellite"],
+    "ocean_temp": ["sea surface temperature nasa","pacific ocean heat satellite","ocean temperature anomaly"],
+    "volcanoes": ["volcano eruption space","hawaii volcano lava nasa","etna eruption satellite","kilauea lava flows"],
+    "hurricanes": ["hurricane from space satellite","tropical storm ISS eye","hurricane irma dorian satellite","cyclone space view"],
+    "spacewalks": ["spacewalk EVA astronaut ISS","astronaut tethered spacewalk","EVA hubble repair","astronaut floating space"],
+    "lunar_missions": ["apollo moon mission surface","artemis moon nasa","apollo 17 lunar rover","lunar lander nasa"],
+    "moon_landing_sites": ["apollo landing site moon","tranquility base nasa","apollo 11 footprint","lunar module nasa"],
+    "rocket_engines": ["rocket engine RS-25 nasa","raptor engine test fire","saturn V engine f1","engine plume rocket"],
+    "tornadoes": ["tornado from space satellite","supercell storm satellite","tornado weather damage aerial"],
+    "space_food": ["space food astronaut nasa ISS","astronaut eating weightless","food packaging ISS"],
+    # Previously missing callbacks — now handled
+    "ozone": ["ozone layer nasa satellite","ozone hole antarctica","ozone depletion south pole"],
+    "ocean_currents": ["ocean currents satellite nasa","gulf stream atlantic satellite","ocean circulation pattern"],
+    "seti": ["radio telescope dish array","very large array VLA","arecibo telescope history","radio telescope night sky"],
+    "gravwaves": ["gravitational waves LIGO detector","black hole merger art nasa","neutron star collision kilonova"],
+    "darkmatter": ["dark matter cosmic web simulation","galaxy cluster dark matter lensing","dark matter map hubble"],
+    "future": ["mars base concept nasa art","lunar base artemis concept","space station future nasa concept"],
+    "radioastro": ["very large array VLA telescope","radio galaxy jets nasa","radio telescope dish"],
+    "grb": ["gamma ray burst nasa swift","gamma ray sky fermi telescope","GRB afterglow optical"],
+    "dark_energy": ["supernovae accelerating universe","dark energy survey telescope","type Ia supernova distance"],
+    "space_stations": ["international space station ISS orbit","ISS exterior solar panels","space station earth view"],
+    "women_in_space": ["women astronauts nasa","Sally Ride nasa first american","female astronaut ISS spacewalk"],
+    "planet_alignment": ["planet parade conjunction sky","planets alignment photo","multiple planets night sky"],
+    "solar_eclipse": ["solar eclipse totality","total solar eclipse corona diamond ring","eclipse path shadow"],
+    "orbital_scale": ["solar system scale comparison","planets size comparison nasa","solar system distance scale"],
 }
 
 DIRECT_MAP = {
