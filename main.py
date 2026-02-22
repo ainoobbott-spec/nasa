@@ -2,6 +2,8 @@
 NASA Space Bot — Webhook mode for Render.com
 """
 import os, logging, random, re, requests, asyncio, threading, json
+import xml.etree.ElementTree as ET
+from html import unescape
 from flask import Flask, request
 from datetime import datetime, date, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -77,6 +79,123 @@ CHANNELS_TEXT = {
            "🚀 اشترك لمتابعة الإطلاقات والصور وأخبار الفضاء!"),
 }
 
+# ── NEWS SOURCES ─────────────────────────────────────────────────────────────
+NEWS_SOURCES = {
+    "news_nasa": {
+        "url": "https://www.nasa.gov/rss/dyn/breaking_news.rss",
+        "name": "NASA",
+        "emoji": "🚀",
+        "fallback_img": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/NASA_logo.svg/800px-NASA_logo.svg.png",
+    },
+    "news_sfn": {
+        "url": "https://spaceflightnow.com/feed/",
+        "name": "SpaceflightNow",
+        "emoji": "🛸",
+        "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0193.jpg",
+    },
+    "news_spacenews": {
+        "url": "https://spacenews.com/feed/",
+        "name": "SpaceNews",
+        "emoji": "📡",
+        "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0171.jpg",
+    },
+    "news_spacedotcom": {
+        "url": "https://www.space.com/feeds/all",
+        "name": "Space.com",
+        "emoji": "🌌",
+        "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIB.jpg",
+    },
+    "news_planetary": {
+        "url": "https://www.planetary.org/articles.rss",
+        "name": "Planetary Society",
+        "emoji": "🪐",
+        "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg",
+    },
+}
+
+def _rss_text(el):
+    """Strip HTML tags and entities from RSS text."""
+    if el is None: return ""
+    txt = el.text or ""
+    txt = re.sub(r'<[^>]+>', ' ', txt)
+    txt = unescape(txt).strip()
+    return re.sub(r'\s+', ' ', txt)
+
+def _rss_image(item_el, ns):
+    """Extract image URL from an RSS <item> element."""
+    # 1. media:content
+    for tag in ["media:content", "{http://search.yahoo.com/mrss/}content",
+                "{http://video.search.yahoo.com/mrss/}content"]:
+        mc = item_el.find(tag)
+        if mc is not None:
+            url = mc.get("url","")
+            if url and url.startswith("http"): return url
+    # 2. media:thumbnail
+    for tag in ["media:thumbnail","{http://search.yahoo.com/mrss/}thumbnail"]:
+        mt = item_el.find(tag)
+        if mt is not None:
+            url = mt.get("url","")
+            if url and url.startswith("http"): return url
+    # 3. enclosure
+    enc = item_el.find("enclosure")
+    if enc is not None:
+        url = enc.get("url","")
+        if url and url.startswith("http") and any(ext in url.lower() for ext in [".jpg",".jpeg",".png",".webp"]): return url
+    # 4. img tag inside description
+    desc_el = item_el.find("description") or item_el.find("content:encoded")
+    if desc_el is not None and desc_el.text:
+        m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', desc_el.text)
+        if m:
+            url = m.group(1)
+            if url.startswith("http"): return url
+    return ""
+
+def fetch_rss(source_key: str, max_items: int = 30) -> list:
+    """Fetch and parse RSS feed. Returns list of article dicts."""
+    src = NEWS_SOURCES.get(source_key)
+    if not src: return []
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 NASASpaceBot/2.0 (+https://t.me/cosmic41)"}
+        r = requests.get(src["url"], headers=headers, timeout=15)
+        r.raise_for_status()
+        root = ET.fromstring(r.content)
+        channel = root.find("channel") or root
+        items = channel.findall("item")
+        articles = []
+        for item in items[:max_items]:
+            title = _rss_text(item.find("title")) or "No title"
+            link  = _rss_text(item.find("link")) or ""
+            desc  = _rss_text(item.find("description")) or _rss_text(item.find("{http://purl.org/rss/1.0/modules/content/}encoded")) or ""
+            desc  = desc[:600]
+            pub   = _rss_text(item.find("pubDate")) or _rss_text(item.find("published")) or ""
+            pub   = pub[:30]
+            guid  = _rss_text(item.find("guid")) or link or title
+            img   = _rss_image(item, {})
+            articles.append({
+                "title": title, "link": link, "desc": desc,
+                "pub": pub, "img": img, "guid": guid,
+                "source": src["name"], "emoji": src["emoji"],
+                "fallback_img": src["fallback_img"],
+            })
+        return articles
+    except Exception as e:
+        logger.error(f"fetch_rss {source_key}: {e}")
+        return []
+
+# ── RSS cache (10 min TTL) ────────────────────────────────────────────────────
+_rss_cache: dict = {}
+RSS_TTL = 600
+
+def rss_cache_get(key):
+    if key in _rss_cache:
+        ts, data = _rss_cache[key]
+        if (datetime.utcnow().timestamp() - ts) < RSS_TTL:
+            return data
+    return None
+
+def rss_cache_set(key, data):
+    _rss_cache[key] = (datetime.utcnow().timestamp(), data)
+
 T = {
 "ru": {
     "choose_lang":"🌍 *Выберите язык / Choose language / בחרו שפה / اختر اللغة*",
@@ -87,6 +206,18 @@ T = {
     "cat_deepspace":"🌌 ГЛУБОКИЙ КОСМОС", "cat_earth":"🌍 ЗЕМЛЯ И АТМОСФЕРА",
     "cat_science":"🔬 НАУКА И ИСТОРИЯ", "cat_live":"🔴 LIVE — РЕАЛЬНОЕ ВРЕМЯ",
     "cat_interact_btn":"🎮 ИНТЕРАКТИВ",
+    "cat_news":"📰 НОВОСТИ КОСМОСА",
+    "title_news":"📰 *Новости космоса*",
+    "btn_news_nasa":"🚀 NASA News",
+    "btn_news_sfn":"🛸 SpaceflightNow",
+    "btn_news_spacenews":"📡 SpaceNews",
+    "btn_news_spacedotcom":"🌌 Space.com",
+    "btn_news_planetary":"🪐 Planetary Society",
+    "btn_news_next":"➡️ Следующая",
+    "btn_news_source":"🔗 Источник",
+    "news_loading":"📰 Загружаю новости...",
+    "news_empty":"📭 Новостей не найдено",
+    "news_counter":"Новость {idx}/{total}",
     "btn_spacefact":"⭐ Факт о космосе", "btn_channels":"📢 Наши каналы", "btn_lang":"🌍 Язык",
     "back_menu":"◀️ Главное меню", "back_cat":"◀️ Назад",
     "btn_refresh":"🔄 Обновить", "btn_more_rnd":"🎲 Ещё", "btn_another":"🔄 Ещё снимок", "btn_other_rv":"🔄 Другой",
@@ -182,6 +313,18 @@ T = {
     "cat_deepspace":"🌌 DEEP SPACE", "cat_earth":"🌍 EARTH & ATMOSPHERE",
     "cat_science":"🔬 SCIENCE & HISTORY", "cat_live":"🔴 LIVE — REAL TIME",
     "cat_interact_btn":"🎮 INTERACTIVE",
+    "cat_news":"📰 SPACE NEWS",
+    "title_news":"📰 *Space News*",
+    "btn_news_nasa":"🚀 NASA News",
+    "btn_news_sfn":"🛸 SpaceflightNow",
+    "btn_news_spacenews":"📡 SpaceNews",
+    "btn_news_spacedotcom":"🌌 Space.com",
+    "btn_news_planetary":"🪐 Planetary Society",
+    "btn_news_next":"➡️ Next",
+    "btn_news_source":"🔗 Source",
+    "news_loading":"📰 Loading news...",
+    "news_empty":"📭 No articles found",
+    "news_counter":"Article {idx}/{total}",
     "btn_spacefact":"⭐ Space Fact", "btn_channels":"📢 Our Channels", "btn_lang":"🌍 Language",
     "back_menu":"◀️ Main Menu", "back_cat":"◀️ Back",
     "btn_refresh":"🔄 Refresh", "btn_more_rnd":"🎲 More", "btn_another":"🔄 Another", "btn_other_rv":"🔄 Other Rover",
@@ -266,6 +409,18 @@ T = {
     "cat_deepspace":"🌌 חלל עמוק", "cat_earth":"🌍 כדור הארץ",
     "cat_science":"🔬 מדע", "cat_live":"🔴 LIVE",
     "cat_interact_btn":"🎮 אינטראקטיב",
+    "cat_news":"📰 חדשות חלל",
+    "title_news":"📰 *חדשות החלל*",
+    "btn_news_nasa":"🚀 NASA",
+    "btn_news_sfn":"🛸 SpaceflightNow",
+    "btn_news_spacenews":"📡 SpaceNews",
+    "btn_news_spacedotcom":"🌌 Space.com",
+    "btn_news_planetary":"🪐 Planetary",
+    "btn_news_next":"➡️ הבא",
+    "btn_news_source":"🔗 מקור",
+    "news_loading":"📰 טוען חדשות...",
+    "news_empty":"📭 לא נמצאו כתבות",
+    "news_counter":"כתבה {idx}/{total}",
     "btn_spacefact":"⭐ עובדה", "btn_channels":"📢 ערוצים", "btn_lang":"🌍 שפה",
     "back_menu":"◀️ תפריט", "back_cat":"◀️ חזרה",
     "btn_refresh":"🔄 רענון", "btn_more_rnd":"🎲 עוד", "btn_another":"🔄 עוד", "btn_other_rv":"🔄 אחר",
@@ -335,6 +490,18 @@ T = {
     "cat_deepspace":"🌌 الفضاء العميق", "cat_earth":"🌍 الأرض",
     "cat_science":"🔬 العلوم", "cat_live":"🔴 مباشر",
     "cat_interact_btn":"🎮 تفاعلي",
+    "cat_news":"📰 أخبار الفضاء",
+    "title_news":"📰 *أخبار الفضاء*",
+    "btn_news_nasa":"🚀 NASA",
+    "btn_news_sfn":"🛸 SpaceflightNow",
+    "btn_news_spacenews":"📡 SpaceNews",
+    "btn_news_spacedotcom":"🌌 Space.com",
+    "btn_news_planetary":"🪐 Planetary",
+    "btn_news_next":"➡️ التالي",
+    "btn_news_source":"🔗 المصدر",
+    "news_loading":"📰 جاري تحميل الأخبار...",
+    "news_empty":"📭 لا توجد مقالات",
+    "news_counter":"مقالة {idx}/{total}",
     "btn_spacefact":"⭐ حقيقة", "btn_channels":"📢 قنواتنا", "btn_lang":"🌍 اللغة",
     "back_menu":"◀️ القائمة", "back_cat":"◀️ العودة",
     "btn_refresh":"🔄 تحديث", "btn_more_rnd":"🎲 المزيد", "btn_another":"🔄 أخرى", "btn_other_rv":"🔄 مركبة",
@@ -494,6 +661,7 @@ def main_menu_kb(lang):
         [InlineKeyboardButton(L("cat_science"),      callback_data="cat_science")],
         [InlineKeyboardButton(L("cat_live"),         callback_data="cat_live")],
         [InlineKeyboardButton(L("cat_interact_btn"), callback_data="cat_interact")],
+        [InlineKeyboardButton(L("cat_news"),         callback_data="cat_news")],
         [InlineKeyboardButton(L("btn_spacefact"),    callback_data="spacefact"),
          InlineKeyboardButton(L("btn_channels"),     callback_data="channels")],
         [InlineKeyboardButton(L("btn_lang"),         callback_data="choose_lang")],
@@ -616,6 +784,32 @@ def cat_interact_kb(lang):
         [InlineKeyboardButton(L("btn_nasa_tv"),       callback_data="nasa_tv")],
         [InlineKeyboardButton(L("back_menu"),         callback_data="back")],
     ])
+
+def cat_news_kb(lang):
+    L = lambda k: tx(lang, k)
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(L("btn_news_nasa"),        callback_data="news_nasa")],
+        [InlineKeyboardButton(L("btn_news_sfn"),         callback_data="news_sfn")],
+        [InlineKeyboardButton(L("btn_news_spacenews"),   callback_data="news_spacenews")],
+        [InlineKeyboardButton(L("btn_news_spacedotcom"), callback_data="news_spacedotcom")],
+        [InlineKeyboardButton(L("btn_news_planetary"),   callback_data="news_planetary")],
+        [InlineKeyboardButton(L("back_menu"),            callback_data="back")],
+    ])
+
+def news_article_kb(lang, source_key, idx, total, article_link):
+    rows = []
+    if total > 1:
+        next_idx = idx + 1 if idx + 1 < total else 0
+        rows.append([InlineKeyboardButton(
+            f"{tx(lang,'btn_news_next')} ({next_idx+1}/{total})",
+            callback_data=f"news_page_{source_key}_{next_idx}"
+        )])
+    src_row = []
+    if article_link:
+        src_row.append(InlineKeyboardButton(tx(lang,"btn_news_source"), url=article_link))
+    src_row.append(InlineKeyboardButton(tx(lang,"back_menu"), callback_data="back"))
+    rows.append(src_row)
+    return InlineKeyboardMarkup(rows)
 
 def notifications_kb(lang, subs, chat_id):
     def btn(key, cb):
@@ -972,6 +1166,21 @@ async def asteroids_h(update, ctx):
             try: dist_ld=f"{float(dist_ld):.2f} LD"
             except: pass
             text+=f"*{i}. {name}*  {hz}\n📏 {d_min:.0f}–{d_max:.0f}m  🚀 {speed}  📍 {dist_ld}\n\n"
+        text+="[🔗 NASA CNEOS](https://cneos.jpl.nasa.gov)"
+        ast_imgs=["asteroid close up nasa dawn","asteroid bennu osiris rex nasa","asteroid ryugu hayabusa",
+                  "near earth asteroid space","asteroid belt rocky nasa"]
+        try:
+            ri=requests.get("https://images-api.nasa.gov/search",
+                params={"q":random.choice(ast_imgs),"media_type":"image","page_size":20},timeout=10)
+            items=[it for it in ri.json().get("collection",{}).get("items",[]) if it.get("links")]
+            if items:
+                img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+                if img_url:
+                    await del_msg(q)
+                    await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
+                        caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"asteroids",ctx))
+                    return
+        except: pass
         await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"asteroids",ctx))
     except Exception as e:
         await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
@@ -1112,6 +1321,20 @@ async def launches_h(update, ctx):
                 except: pass
                 text+=f"*{i}. {name}*\n   🚀 {rocket}  |  {prov}\n   ⏰ {net}  {emoji}\n\n"
             except: continue
+        launch_imgs=["rocket launch nasa","SpaceX falcon launch pad","rocket liftoff pad exhaust",
+                     "space launch vehicle liftoff","Atlas rocket launch","falcon 9 launch"]
+        try:
+            ri=requests.get("https://images-api.nasa.gov/search",
+                params={"q":random.choice(launch_imgs),"media_type":"image","page_size":20},timeout=10)
+            items=[it for it in ri.json().get("collection",{}).get("items",[]) if it.get("links")]
+            if items:
+                img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+                if img_url:
+                    await del_msg(q)
+                    await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
+                        caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"launches",ctx))
+                    return
+        except: pass
         await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"launches",ctx))
     except Exception as e:
         await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
@@ -1127,8 +1350,26 @@ async def satellites_h(update, ctx):
             total=len(sl); active=sum(1 for s in sl if isinstance(s,dict) and not (s.get("spaceTrack") or {}).get("DECAY_DATE"))
             cache_set("starlink",(total,active))
         except: total=active="?"
-    await safe_edit(q,f"📡 *Satellites*\n\n🌍 In orbit: ~9,000+\n🛸 *Starlink:* {total} total, {active} active\n\n[🔗 n2yo.com](https://www.n2yo.com)",
-        reply_markup=back_kb(lang,"satellites",ctx))
+    text=(f"📡 *Satellites in Orbit*\n\n"
+          f"🌍 Total tracked: ~9,000+\n"
+          f"🛸 *Starlink:* {total} total, {active} active\n"
+          f"🔭 *Other constellations:* OneWeb, GPS, Galileo, GLONASS\n\n"
+          f"[🔗 n2yo.com — live tracking](https://www.n2yo.com)")
+    sat_imgs=["satellite orbit earth nasa","starlink constellation night sky","GPS satellite earth orbit",
+              "communication satellite deployment space","satellite solar panels orbit"]
+    try:
+        ri=requests.get("https://images-api.nasa.gov/search",
+            params={"q":random.choice(sat_imgs),"media_type":"image","page_size":20},timeout=10)
+        items=[it for it in ri.json().get("collection",{}).get("items",[]) if it.get("links")]
+        if items:
+            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            if img_url:
+                await del_msg(q)
+                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
+                    caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"satellites",ctx))
+                return
+    except: pass
+    await safe_edit(q,text,reply_markup=back_kb(lang,"satellites",ctx))
 
 async def meteors_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -1209,13 +1450,51 @@ async def moon_h(update, ctx):
 
 async def telescopes_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
-    await safe_edit(q,"🔬 *Telescopes*\n\n🌌 *JWST* — 6.5m, L2\n🔭 *Hubble* — 2.4m\n📡 *VLT* — 4×8.2m\n🌐 *FAST* — 500m\n🔭 *ELT (~2028)* — 39m",
-        reply_markup=back_kb(lang,ctx=ctx))
+    text=("🔬 *Space Telescopes*\n\n"
+          "🌌 *JWST* — mirror 6.5m, orbit L2, infrared\n"
+          "🔭 *Hubble* — mirror 2.4m, optical/UV, 600km orbit\n"
+          "📡 *Chandra* — X-ray, high elliptical orbit\n"
+          "🌊 *XMM-Newton* — X-ray, ESA\n"
+          "🔭 *Spitzer* — infrared (retired 2020)\n"
+          "📡 *VLT* — 4×8.2m, Atacama\n"
+          "🌐 *FAST* — 500m radio dish, China\n"
+          "🔭 *ELT (~2028)* — 39m mirror, ESA\n"
+          "🌌 *Roman (~2027)* — wide-field infrared, NASA")
+    tel_imgs=["James Webb Space Telescope NASA","Hubble Space Telescope orbit","Chandra X-ray telescope",
+              "very large telescope ESO","telescope mirror primary hexagonal","space observatory nasa"]
+    try:
+        ri=requests.get("https://images-api.nasa.gov/search",
+            params={"q":random.choice(tel_imgs),"media_type":"image","page_size":20},timeout=10)
+        items=[it for it in ri.json().get("collection",{}).get("items",[]) if it.get("links")]
+        if items:
+            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            if img_url:
+                await del_msg(q)
+                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
+                    caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,ctx=ctx))
+                return
+    except: pass
+    await safe_edit(q,text,reply_markup=back_kb(lang,ctx=ctx))
 
 async def spacefact_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     fact=random.choice(SPACE_FACTS.get(lang,SPACE_FACTS["en"]))
-    await safe_edit(q,f"⭐ *Fact*\n\n{fact}",reply_markup=back_kb(lang,"spacefact",ctx))
+    text=f"⭐ *Space Fact*\n\n{fact}"
+    fact_imgs=["space stars galaxy nasa","universe deep field","cosmos stars milky way","nebula colorful nasa hubble",
+               "star formation space","galaxy spiral nasa","cosmos exploration nasa"]
+    try:
+        ri=requests.get("https://images-api.nasa.gov/search",
+            params={"q":random.choice(fact_imgs),"media_type":"image","page_size":20},timeout=10)
+        items=[it for it in ri.json().get("collection",{}).get("items",[]) if it.get("links")]
+        if items:
+            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            if img_url:
+                await del_msg(q)
+                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
+                    caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"spacefact",ctx))
+                return
+    except: pass
+    await safe_edit(q,text,reply_markup=back_kb(lang,"spacefact",ctx))
 
 async def channels_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -1603,7 +1882,110 @@ async def nasa_tv_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     await safe_edit(q,tx(lang,"nasa_tv_title"),reply_markup=back_kb(lang,ctx=ctx))
 
-# ── JOB QUEUE HANDLERS ────────────────────────────────────────────────────────
+# ── NEWS HANDLERS ─────────────────────────────────────────────────────────────
+async def _show_news_article(q, ctx, lang, source_key, idx):
+    """Display one news article with photo (or text fallback). Anti-repeat via user_data."""
+    src = NEWS_SOURCES.get(source_key, {})
+    # Load from cache or fetch fresh
+    articles = rss_cache_get(source_key)
+    if not articles:
+        articles = fetch_rss(source_key, max_items=30)
+        if articles:
+            rss_cache_set(source_key, articles)
+    if not articles:
+        await safe_edit(q, tx(lang,"news_empty"), reply_markup=back_kb(lang,"cat_news",ctx))
+        return
+
+    total = len(articles)
+    idx   = idx % total  # wrap around
+    art   = articles[idx]
+
+    # Build caption (NO external link inline — article text shown here)
+    title  = art["title"]
+    desc   = art["desc"]
+    pub    = art["pub"]
+    source = art["source"]
+    emoji  = art["emoji"]
+    link   = art["link"]
+
+    caption = (f"{emoji} *{source}*\n"
+               f"📅 _{pub}_\n\n"
+               f"*{title}*\n\n"
+               f"{desc}")
+    caption = caption[:1020]
+
+    kb = news_article_kb(lang, source_key, idx, total, link)
+    img_url = art.get("img","") or art.get("fallback_img","")
+
+    await del_msg(q)
+    if img_url:
+        try:
+            await ctx.bot.send_photo(
+                chat_id=q.message.chat_id, photo=img_url,
+                caption=caption, parse_mode="Markdown", reply_markup=kb)
+            return
+        except Exception:
+            pass
+    # fallback: SDO solar image as header
+    try:
+        await ctx.bot.send_photo(
+            chat_id=q.message.chat_id,
+            photo=src.get("fallback_img","https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0193.jpg"),
+            caption=caption, parse_mode="Markdown", reply_markup=kb)
+    except Exception:
+        await ctx.bot.send_message(
+            chat_id=q.message.chat_id, text=caption[:4096],
+            parse_mode="Markdown", reply_markup=kb, disable_web_page_preview=True)
+
+async def news_source_h(update, ctx, source_key):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    await safe_edit(q, tx(lang,"news_loading"))
+    # Start from index 0, but track per-user last-seen to avoid repeats
+    seen_key = f"news_seen_{source_key}"
+    seen = ctx.user_data.get(seen_key, set())
+    # find first unseen index
+    articles = rss_cache_get(source_key) or fetch_rss(source_key, 30)
+    if articles: rss_cache_set(source_key, articles)
+    start_idx = 0
+    if articles:
+        for i, art in enumerate(articles):
+            if art["guid"] not in seen:
+                start_idx = i
+                break
+        else:
+            # all seen → reset
+            ctx.user_data[seen_key] = set()
+            start_idx = 0
+    ctx.user_data[seen_key] = seen | {articles[start_idx]["guid"]} if articles else seen
+    ctx.user_data["last_cat"] = "cat_news"
+    await _show_news_article(q, ctx, lang, source_key, start_idx)
+
+async def news_nasa_h(update, ctx):      await news_source_h(update, ctx, "news_nasa")
+async def news_sfn_h(update, ctx):       await news_source_h(update, ctx, "news_sfn")
+async def news_spacenews_h(update, ctx): await news_source_h(update, ctx, "news_spacenews")
+async def news_spacedotcom_h(update, ctx): await news_source_h(update, ctx, "news_spacedotcom")
+async def news_planetary_h(update, ctx): await news_source_h(update, ctx, "news_planetary")
+
+async def news_page_h(update, ctx):
+    """Handle news_page_{source}_{idx} callbacks."""
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    parts = q.data.split("_")
+    # format: news_page_news_nasa_3  →  parts = ['news','page','news','nasa','3']
+    try:
+        idx = int(parts[-1])
+        source_key = "_".join(parts[2:-1])
+    except Exception:
+        await safe_answer(q); return
+    # mark as seen
+    seen_key = f"news_seen_{source_key}"
+    articles = rss_cache_get(source_key) or []
+    if articles and idx < len(articles):
+        seen = ctx.user_data.get(seen_key, set())
+        seen.add(articles[idx]["guid"])
+        ctx.user_data[seen_key] = seen
+    await _show_news_article(q, ctx, lang, source_key, idx)
+
+
 async def job_asteroid_alert(context):
     subs=load_subscribers(); chat_ids=subs.get("asteroids",[])
     if not chat_ids: return
@@ -1740,6 +2122,17 @@ IMG_MAP = {
     "rocket_engines": ["rocket engine RS-25 nasa","raptor engine test fire","saturn V engine f1","engine plume rocket"],
     "tornadoes": ["tornado from space satellite","supercell storm satellite","tornado weather damage aerial"],
     "space_food": ["space food astronaut nasa ISS","astronaut eating weightless","food packaging ISS"],
+    # Static text sections — now get images too
+    "kuiper_belt": ["kuiper belt pluto new horizons","dwarf planets kuiper belt","arrokoth new horizons flyby"],
+    "mars_colonization": ["mars base concept nasa","mars colony artist render","spacex starship mars"],
+    "space_medicine": ["astronaut health medical space","bone loss microgravity","space medicine ISS experiments"],
+    "astronaut_training": ["astronaut training underwater NASA","centrifuge astronaut training","neutral buoyancy pool nasa"],
+    "debris": ["space debris orbit earth","orbital junk satellite nasa","space junk simulation earth orbit"],
+    "space_records": ["cosmonaut long duration space record","ISS long stay astronaut","Voyager 1 distance solar system"],
+    "space_stations": ["international space station ISS orbit","ISS exterior solar panels","space station earth view"],
+    "women_in_space": ["women astronauts nasa ISS","Sally Ride nasa first american","female astronaut spacewalk"],
+    "rocket_engines": ["rocket engine RS-25 nasa","raptor engine test fire","saturn V engine f1"],
+    "kuiper": ["kuiper belt pluto new horizons","dwarf planets kuiper belt","arrokoth new horizons flyby"],
     # Previously missing callbacks — now handled
     "ozone": ["ozone layer nasa satellite","ozone hole antarctica","ozone depletion south pole"],
     "ocean_currents": ["ocean currents satellite nasa","gulf stream atlantic satellite","ocean circulation pattern"],
@@ -1785,6 +2178,12 @@ DIRECT_MAP = {
     "mars_rover_live":    mars_rover_live_h,
     "nasa_tv":            nasa_tv_h,
     "lunar_calendar":     lunar_calendar_h,
+    # News sources
+    "news_nasa":         news_nasa_h,
+    "news_sfn":          news_sfn_h,
+    "news_spacenews":    news_spacenews_h,
+    "news_spacedotcom":  news_spacedotcom_h,
+    "news_planetary":    news_planetary_h,
 }
 
 CAT_MAP = {
@@ -1795,6 +2194,7 @@ CAT_MAP = {
     "cat_science":   (cat_science_kb,   "title_science"),
     "cat_live":      (cat_live_kb,      "title_live"),
     "cat_interact":  (cat_interact_kb,  "title_interact"),
+    "cat_news":      (cat_news_kb,      "title_news"),
 }
 
 async def callback_router(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -1803,6 +2203,7 @@ async def callback_router(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if cb.startswith("setlang_"): await setlang_h(update,ctx); return
     if cb=="back":              await back_h(update,ctx); return
     if cb=="noop":              await safe_answer(q); return
+    if cb.startswith("news_page_"): await news_page_h(update,ctx); return
     if cb in CAT_MAP:
         kb_fn,title_key=CAT_MAP[cb]; await safe_answer(q)
         ctx.user_data["last_cat"]=cb
@@ -1816,7 +2217,14 @@ async def callback_router(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if cb in STATIC_TEXTS:
         await safe_answer(q)
         texts=STATIC_TEXTS[cb]; text=texts.get(lang,texts.get("en",""))
-        await safe_edit(q,text[:4096],reply_markup=back_kb(lang,cb,ctx)); return
+        # Try to find an image for static text sections too
+        img_queries = IMG_MAP.get(cb, [])
+        if img_queries:
+            await safe_answer(q); await safe_edit(q,"⏳...")
+            await send_nasa_image(q, ctx, img_queries, cb)
+        else:
+            await safe_edit(q,text[:4096],reply_markup=back_kb(lang,cb,ctx))
+        return
     if cb in IMG_MAP:
         await safe_answer(q); await safe_edit(q,"⏳...")
         await send_nasa_image(q,ctx,IMG_MAP[cb],cb); return
