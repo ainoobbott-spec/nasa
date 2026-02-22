@@ -13,6 +13,8 @@ WEBHOOK_URL    = os.environ.get("WEBHOOK_URL", "").rstrip("/")
 NASA_BASE      = "https://api.nasa.gov"
 PORT           = int(os.environ.get("PORT", 10000))
 PLANET_DATE = 1
+PLANET_WEIGHT = 2
+PLANET_CHOICE, PLANET_DATE, PLANET_WEIGHT = range(3)
 logging.basicConfig(format="%(asctime)s | %(levelname)s | %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
