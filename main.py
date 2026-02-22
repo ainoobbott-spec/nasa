@@ -1991,8 +1991,8 @@ async def setup_bot():
         jq.run_daily(job_asteroid_alert,   time=datetime.strptime("09:00","%H:%M").time())
         jq.run_daily(job_lunar_alert,      time=datetime.strptime("07:00","%H:%M").time())
         jq.run_daily(job_check_capsules,   time=datetime.strptime("10:00","%H:%M").time())
-        jq.run_repeating(job_space_weather_alert, interval=3600, first=60)  # every hour
-        jq.run_weekly(job_meteor_alert,    day=0, time=datetime.strptime("08:00","%H:%M").time())  # Mondays
+        jq.run_repeating(job_space_weather_alert, interval=3600,       first=60)   # every hour
+        jq.run_repeating(job_meteor_alert,        interval=86400 * 7,  first=120)  # every 7 days
         logger.info("✅ Scheduled jobs registered")
     else:
         logger.warning("⚠️ JobQueue not available — install python-telegram-bot[job-queue]")
