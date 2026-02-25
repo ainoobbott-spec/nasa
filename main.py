@@ -144,6 +144,26 @@ NEWS_SOURCES = {
         "emoji": "🪐",
         "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg",
     },
+    "news_esa": {
+        "url": "https://www.esa.int/rssfeed/Our_Activities/Space_News",
+        "url_fallback": "https://www.esa.int/rssfeed/Space_news",
+        "name": "ESA",
+        "emoji": "🛰",
+        "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0193.jpg",
+    },
+    "news_universetoday": {
+        "url": "https://www.universetoday.com/feed/",
+        "name": "Universe Today",
+        "emoji": "🪐",
+        "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0171.jpg",
+    },
+    "news_skytel": {
+        "url": "https://skyandtelescope.org/feed/",
+        "url_fallback": "https://www.skyandtelescope.com/feed/",
+        "name": "Sky & Telescope",
+        "emoji": "🔭",
+        "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg",
+    },
 }
 # ── End: NEWS SOURCES CONFIG ──────────────────────────────────────────────────
 
@@ -395,6 +415,9 @@ T = {
     "btn_news_spacenews":"📡 SpaceNews",
     "btn_news_spacedotcom":"🌌 Space.com",
     "btn_news_planetary":"🪐 Planetary Society",
+    "btn_news_esa":          "🛰 ESA",
+    "btn_news_universetoday":"🪐 Universe Today",
+    "btn_news_skytel":       "🔭 Sky & Telescope",
     "btn_news_next":"➡️ Следующая",
     "btn_news_source":"🔗 Источник",
     "news_loading":"📰 Загружаю новости...",
@@ -491,6 +514,9 @@ T = {
     "btn_news_spacenews":"📡 SpaceNews",
     "btn_news_spacedotcom":"🌌 Space.com",
     "btn_news_planetary":"🪐 Planetary Society",
+    "btn_news_esa":          "🛰 ESA",
+    "btn_news_universetoday":"🪐 Universe Today",
+    "btn_news_skytel":       "🔭 Sky & Telescope",
     "btn_news_next":"➡️ Next",
     "btn_news_source":"🔗 Source",
     "news_loading":"📰 Loading news...",
@@ -587,6 +613,9 @@ T = {
     "btn_news_spacenews":"📡 SpaceNews",
     "btn_news_spacedotcom":"🌌 Space.com",
     "btn_news_planetary":"🪐 Planetary",
+    "btn_news_esa":          "🛰 ESA",
+    "btn_news_universetoday":"🪐 Universe Today",
+    "btn_news_skytel":       "🔭 Sky & Tel",
     "btn_news_next":"➡️ הבא",
     "btn_news_source":"🔗 מקור",
     "news_loading":"📰 טוען חדשות...",
@@ -668,6 +697,9 @@ T = {
     "btn_news_spacenews":"📡 SpaceNews",
     "btn_news_spacedotcom":"🌌 Space.com",
     "btn_news_planetary":"🪐 Planetary",
+    "btn_news_esa":          "🛰 ESA",
+    "btn_news_universetoday":"🪐 Universe Today",
+    "btn_news_skytel":       "🔭 Sky & Tel",
     "btn_news_next":"➡️ التالي",
     "btn_news_source":"🔗 المصدر",
     "news_loading":"📰 جاري تحميل الأخبار...",
@@ -1033,11 +1065,16 @@ def cat_interact_kb(lang):
 def cat_news_kb(lang):
     L = lambda k: tx(lang, k)
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(L("btn_news_nasa"),        callback_data="news_nasa")],
+        # 4 most reliable sources shown in menu
         [InlineKeyboardButton(L("btn_news_sfn"),         callback_data="news_sfn")],
         [InlineKeyboardButton(L("btn_news_spacenews"),   callback_data="news_spacenews")],
-        [InlineKeyboardButton(L("btn_news_spacedotcom"), callback_data="news_spacedotcom")],
-        [InlineKeyboardButton(L("btn_news_planetary"),   callback_data="news_planetary")],
+        [InlineKeyboardButton(L("btn_news_esa"),         callback_data="news_esa")],
+        [InlineKeyboardButton(L("btn_news_universetoday"), callback_data="news_universetoday")],
+        # Extra sources in second row
+        [InlineKeyboardButton(L("btn_news_nasa"),        callback_data="news_nasa"),
+         InlineKeyboardButton(L("btn_news_skytel"),      callback_data="news_skytel")],
+        [InlineKeyboardButton(L("btn_news_planetary"),   callback_data="news_planetary"),
+         InlineKeyboardButton(L("btn_news_spacedotcom"), callback_data="news_spacedotcom")],
         [InlineKeyboardButton(L("back_menu"),            callback_data="back")],
     ])
 
@@ -2414,6 +2451,9 @@ async def news_sfn_h(update, ctx):       await news_source_h(update, ctx, "news_
 async def news_spacenews_h(update, ctx): await news_source_h(update, ctx, "news_spacenews")
 async def news_spacedotcom_h(update, ctx): await news_source_h(update, ctx, "news_spacedotcom")
 async def news_planetary_h(update, ctx): await news_source_h(update, ctx, "news_planetary")
+async def news_esa_h(update, ctx):          await news_source_h(update, ctx, "news_esa")
+async def news_universetoday_h(update, ctx): await news_source_h(update, ctx, "news_universetoday")
+async def news_skytel_h(update, ctx):       await news_source_h(update, ctx, "news_skytel")
 
 async def news_page_h(update, ctx):
     """Handle news_page_{source}_{idx} callbacks."""
@@ -2641,6 +2681,9 @@ DIRECT_MAP = {
     "news_spacenews":     news_spacenews_h,
     "news_spacedotcom":   news_spacedotcom_h,
     "news_planetary":     news_planetary_h,
+    "news_esa":           news_esa_h,
+    "news_universetoday": news_universetoday_h,
+    "news_skytel":        news_skytel_h,
 }
 
 CAT_MAP = {
