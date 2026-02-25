@@ -1,33 +1,52 @@
 """
 NASA Space Bot — Webhook mode for Render.com
 """
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: IMPORTS & ENVIRONMENT CONFIG                                           ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 import os, logging, random, re, requests, asyncio, threading, json
 import xml.etree.ElementTree as ET
 from html import unescape
 from flask import Flask, request
 from datetime import datetime, date, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters, ConversationHandler
+from telegram.ext import (Application, CommandHandler, CallbackQueryHandler,
+                           ContextTypes, MessageHandler, filters, ConversationHandler)
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
-NASA_API_KEY   = os.environ.get("NASA_API_KEY",   "UXsg0T63ukdHkImo2VAejU46MHdnZdGgtgrlcQmE")
+NASA_API_KEY   = os.environ.get("NASA_API_KEY", "UXsg0T63ukdHkImo2VAejU46MHdnZdGgtgrlcQmE")
 WEBHOOK_URL    = os.environ.get("WEBHOOK_URL", "").rstrip("/")
 NASA_BASE      = "https://api.nasa.gov"
 PORT           = int(os.environ.get("PORT", 10000))
+# ── End: IMPORTS & ENVIRONMENT CONFIG ─────────────────────────────────────────
 
-# ── ConversationHandler states (MUST be defined before handlers) ──────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: CONVERSATION HANDLER STATES                                            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+# MUST be defined before handlers
 PLANET_DATE, PLANET_WEIGHT, PLANET_CHOICE = range(3)
 HOROSCOPE_BDAY = 10
 CAPSULE_MSG    = 20
+# ── End: CONVERSATION HANDLER STATES ──────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: LOGGING & FLASK INIT                                                   ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 logging.basicConfig(format="%(asctime)s | %(levelname)s | %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 flask_app = Flask(__name__)
 tg_app    = None
 bot_loop  = None
+# ── End: LOGGING & FLASK INIT ─────────────────────────────────────────────────
 
-# ── FILE STORAGE HELPERS ──────────────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: FILE STORAGE HELPERS (subscribers.json, capsules.json)                 ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 SUBSCRIBERS_FILE = "subscribers.json"
 CAPSULES_FILE    = "capsules.json"
 
@@ -58,8 +77,12 @@ def save_capsules(data):
             json.dump(data, f)
     except Exception as e:
         logger.error(f"save_capsules: {e}")
+# ── End: FILE STORAGE HELPERS ─────────────────────────────────────────────────
 
-# ── TRANSLATIONS ──────────────────────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: CHANNEL TEXTS (multilingual)                                           ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 CHANNELS_TEXT = {
     "ru": ("📢 *Наши каналы*\n\n"
            "📡 [Канал NASA Space Bot](https://t.me/cosmic41)\n"
@@ -78,11 +101,19 @@ CHANNELS_TEXT = {
            "💬 [مجموعة المجتمع](https://t.me/cosmic40)\n\n"
            "🚀 اشترك لمتابعة الإطلاقات والصور وأخبار الفضاء!"),
 }
+# ── End: CHANNEL TEXTS ────────────────────────────────────────────────────────
 
-# ── NEWS SOURCES ─────────────────────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: NEWS SOURCES CONFIG                                                    ║
+# FIX: Updated NASA URL (old /rss/dyn/ endpoint is dead)                       ║
+# FIX: Added url_fallback for NASA and Planetary Society                        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 NEWS_SOURCES = {
     "news_nasa": {
-        "url": "https://www.nasa.gov/rss/dyn/breaking_news.rss",
+        # FIX: old URL https://www.nasa.gov/rss/dyn/breaking_news.rss is DEAD
+        "url": "https://www.nasa.gov/news-release/feed/",
+        "url_fallback": "https://blogs.nasa.gov/feed/",
         "name": "NASA",
         "emoji": "🚀",
         "fallback_img": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/NASA_logo.svg/800px-NASA_logo.svg.png",
@@ -106,15 +137,26 @@ NEWS_SOURCES = {
         "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIB.jpg",
     },
     "news_planetary": {
+        # FIX: Planetary Society uses Atom format — handled by _parse_atom()
         "url": "https://www.planetary.org/articles.rss",
+        "url_fallback": "https://www.planetary.org/feed",
         "name": "Planetary Society",
         "emoji": "🪐",
         "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg",
     },
 }
+# ── End: NEWS SOURCES CONFIG ──────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: RSS / ATOM PARSING HELPERS                                             ║
+# FIX: Added Atom format support (_parse_atom) — Planetary Society uses Atom   ║
+# FIX: Extracted _parse_rss_items for cleaner code                             ║
+# FIX: Improved link extraction (handles attribute href for Atom)               ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 
 def _rss_text(el):
-    """Strip HTML tags and entities from RSS text."""
+    """Strip HTML tags and entities from RSS text element."""
     if el is None: return ""
     txt = el.text or ""
     txt = re.sub(r'<[^>]+>', ' ', txt)
@@ -122,67 +164,202 @@ def _rss_text(el):
     return re.sub(r'\s+', ' ', txt)
 
 def _rss_image(item_el, ns):
-    """Extract image URL from an RSS <item> element."""
+    """Extract image URL from an RSS <item> or Atom <entry> element."""
     # 1. media:content
-    for tag in ["media:content", "{http://search.yahoo.com/mrss/}content",
+    for tag in ["media:content",
+                "{http://search.yahoo.com/mrss/}content",
                 "{http://video.search.yahoo.com/mrss/}content"]:
         mc = item_el.find(tag)
         if mc is not None:
-            url = mc.get("url","")
+            url = mc.get("url", "")
             if url and url.startswith("http"): return url
     # 2. media:thumbnail
-    for tag in ["media:thumbnail","{http://search.yahoo.com/mrss/}thumbnail"]:
+    for tag in ["media:thumbnail", "{http://search.yahoo.com/mrss/}thumbnail"]:
         mt = item_el.find(tag)
         if mt is not None:
-            url = mt.get("url","")
+            url = mt.get("url", "")
             if url and url.startswith("http"): return url
     # 3. enclosure
     enc = item_el.find("enclosure")
     if enc is not None:
-        url = enc.get("url","")
-        if url and url.startswith("http") and any(ext in url.lower() for ext in [".jpg",".jpeg",".png",".webp"]): return url
-    # 4. img tag inside description
-    desc_el = item_el.find("description") or item_el.find("content:encoded")
-    if desc_el is not None and desc_el.text:
-        m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', desc_el.text)
-        if m:
-            url = m.group(1)
-            if url.startswith("http"): return url
+        url = enc.get("url", "")
+        if url and url.startswith("http") and any(
+                ext in url.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
+            return url
+    # 4. img tag inside description/content
+    for tag in ["description", "content:encoded",
+                "{http://purl.org/rss/1.0/modules/content/}encoded",
+                "{http://www.w3.org/2005/Atom}content", "content", "summary"]:
+        desc_el = item_el.find(tag)
+        if desc_el is not None and desc_el.text:
+            m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', desc_el.text)
+            if m:
+                url = m.group(1)
+                if url.startswith("http"): return url
     return ""
 
+def _parse_rss_items(items, src, max_items):
+    """Parse standard RSS 2.0 <item> elements."""
+    articles = []
+    for item in items[:max_items]:
+        title = _rss_text(item.find("title")) or "No title"
+        # Link: text node in RSS, attribute in some hybrid feeds
+        link_el = item.find("link")
+        if link_el is not None:
+            link = (link_el.text or "").strip() or link_el.get("href", "")
+        else:
+            link = ""
+        desc = (
+            _rss_text(item.find("description")) or
+            _rss_text(item.find("{http://purl.org/rss/1.0/modules/content/}encoded")) or ""
+        )
+        desc  = desc[:600]
+        pub   = _rss_text(item.find("pubDate")) or _rss_text(item.find("published")) or ""
+        pub   = pub[:30]
+        guid  = _rss_text(item.find("guid")) or link or title
+        img   = _rss_image(item, {})
+        articles.append({
+            "title": title, "link": link, "desc": desc,
+            "pub": pub, "img": img, "guid": guid,
+            "source": src["name"], "emoji": src["emoji"],
+            "fallback_img": src["fallback_img"],
+        })
+    return articles
+
+def _parse_atom(root, src, max_items):
+    """
+    Parse Atom 1.0 feed format.
+    FIX: Planetary Society and some NASA feeds use Atom, not RSS.
+    Atom uses <entry> (not <item>), <link href="..."> attribute, <summary>/<content>.
+    """
+    ATOM_NS = "http://www.w3.org/2005/Atom"
+
+    def _find(el, tag):
+        """Try namespaced then bare tag."""
+        return el.find(f"{{{ATOM_NS}}}{tag}") or el.find(tag)
+
+    def _findall(el, tag):
+        result = el.findall(f"{{{ATOM_NS}}}{tag}")
+        return result if result else el.findall(tag)
+
+    entries  = _findall(root, "entry")
+    articles = []
+    for entry in entries[:max_items]:
+        # Title
+        title_el = _find(entry, "title")
+        title    = unescape((title_el.text or "No title").strip()) if title_el is not None else "No title"
+
+        # Link — Atom uses <link rel="alternate" href="...">
+        link = ""
+        for link_el in (_findall(entry, "link")):
+            rel  = link_el.get("rel", "alternate")
+            href = link_el.get("href", "")
+            if href.startswith("http"):
+                if rel == "alternate":
+                    link = href; break
+                elif not link:
+                    link = href
+
+        # Description: summary or content
+        desc = ""
+        for tag in ("summary", "content"):
+            el = _find(entry, tag)
+            if el is not None and el.text:
+                desc = re.sub(r'<[^>]+>', ' ', el.text)
+                desc = unescape(desc).strip()[:600]
+                break
+
+        # Published / updated
+        pub = ""
+        for tag in ("published", "updated"):
+            el = _find(entry, tag)
+            if el is not None and el.text:
+                pub = el.text.strip()[:30]; break
+
+        # GUID / id
+        id_el = _find(entry, "id")
+        guid  = (id_el.text or link or title) if id_el is not None else (link or title)
+
+        img = _rss_image(entry, {})
+
+        articles.append({
+            "title": title, "link": link, "desc": desc,
+            "pub": pub, "img": img, "guid": guid,
+            "source": src["name"], "emoji": src["emoji"],
+            "fallback_img": src["fallback_img"],
+        })
+    return articles
+
+
 def fetch_rss(source_key: str, max_items: int = 30) -> list:
-    """Fetch and parse RSS feed. Returns list of article dicts."""
+    """
+    Fetch and parse RSS or Atom feed.
+    FIX: Now handles both RSS 2.0 and Atom 1.0 formats.
+    FIX: Tries url_fallback if primary URL fails.
+    FIX: Better headers to avoid 403 blocks.
+    Returns list of article dicts or [] on failure.
+    """
     src = NEWS_SOURCES.get(source_key)
     if not src: return []
-    try:
-        headers = {"User-Agent": "Mozilla/5.0 NASASpaceBot/2.0 (+https://t.me/cosmic41)"}
-        r = requests.get(src["url"], headers=headers, timeout=15)
-        r.raise_for_status()
-        root = ET.fromstring(r.content)
-        channel = root.find("channel") or root
-        items = channel.findall("item")
-        articles = []
-        for item in items[:max_items]:
-            title = _rss_text(item.find("title")) or "No title"
-            link  = _rss_text(item.find("link")) or ""
-            desc  = _rss_text(item.find("description")) or _rss_text(item.find("{http://purl.org/rss/1.0/modules/content/}encoded")) or ""
-            desc  = desc[:600]
-            pub   = _rss_text(item.find("pubDate")) or _rss_text(item.find("published")) or ""
-            pub   = pub[:30]
-            guid  = _rss_text(item.find("guid")) or link or title
-            img   = _rss_image(item, {})
-            articles.append({
-                "title": title, "link": link, "desc": desc,
-                "pub": pub, "img": img, "guid": guid,
-                "source": src["name"], "emoji": src["emoji"],
-                "fallback_img": src["fallback_img"],
-            })
-        return articles
-    except Exception as e:
-        logger.error(f"fetch_rss {source_key}: {e}")
-        return []
 
-# ── RSS cache (10 min TTL) ────────────────────────────────────────────────────
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36 NASASpaceBot/2.0"
+        ),
+        "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
+    }
+
+    urls_to_try = [src["url"]]
+    if src.get("url_fallback"):
+        urls_to_try.append(src["url_fallback"])
+
+    for url in urls_to_try:
+        try:
+            r = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
+            r.raise_for_status()
+
+            root = ET.fromstring(r.content)
+            tag  = root.tag.lower()
+
+            # Detect Atom: root tag is <feed> or contains "atom" namespace
+            is_atom = (
+                tag == "feed"
+                or tag.endswith("}feed")
+                or "atom" in tag
+                or "{http://www.w3.org/2005/Atom}" in root.tag
+            )
+
+            if is_atom:
+                articles = _parse_atom(root, src, max_items)
+            else:
+                channel  = root.find("channel") or root
+                items    = channel.findall("item")
+                articles = _parse_rss_items(items, src, max_items)
+
+            if articles:
+                logger.info(f"fetch_rss {source_key}: got {len(articles)} articles from {url}")
+                return articles
+            else:
+                logger.warning(f"fetch_rss {source_key}: parsed 0 articles from {url}")
+
+        except ET.ParseError as e:
+            logger.error(f"fetch_rss {source_key} XML parse error at {url}: {e}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"fetch_rss {source_key} request error at {url}: {e}")
+        except Exception as e:
+            logger.error(f"fetch_rss {source_key} unknown error at {url}: {e}")
+
+    return []
+# ── End: RSS / ATOM PARSING HELPERS ───────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: RSS CACHE (10-minute TTL)                                              ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 _rss_cache: dict = {}
 RSS_TTL = 600
 
@@ -195,7 +372,12 @@ def rss_cache_get(key):
 
 def rss_cache_set(key, data):
     _rss_cache[key] = (datetime.utcnow().timestamp(), data)
+# ── End: RSS CACHE ────────────────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: TRANSLATIONS (T dictionary — ru/en/he/ar)                              ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 T = {
 "ru": {
     "choose_lang":"🌍 *Выберите язык / Choose language / בחרו שפה / اختر اللغة*",
@@ -229,7 +411,6 @@ T = {
     "unknown":"🤔 Используй /start", "hazard_yes":"🔴 ОПАСЕН", "hazard_no":"🟢 Безопасен",
     "iss_map":"🗺 Карта", "iss_no_crew":"Нет данных", "live_nodata":"Нет данных.",
     "moon_phases":["Новолуние","Растущий серп","Первая четверть","Растущая Луна","Полнолуние","Убывающая Луна","Последняя четверть","Убывающий серп"],
-    # Interactive buttons
     "btn_planet_calc":"🪐 Калькулятор планет",
     "btn_horoscope":"🔮 Космогороскоп",
     "btn_space_name":"👨‍🚀 Космическое имя",
@@ -240,15 +421,12 @@ T = {
     "btn_mars_live":"🤖 Марсоход Live",
     "btn_notifications":"🔔 Уведомления",
     "btn_nasa_tv":"📺 NASA TV",
-    # Planet calculator
     "planet_calc_ask_date":"📅 Введите дату рождения в формате *ДД.ММ.ГГГГ*\nПример: 15.04.1990",
     "planet_calc_ask_weight":"⚖️ Введите ваш вес в *кг*\nПример: 70",
     "planet_calc_error_date":"❌ Неверный формат даты. Попробуй: *15.04.1990*",
     "planet_calc_error_weight":"❌ Неверный вес. Введи число от 1 до 500 кг",
-    # Horoscope
     "horoscope_ask":"♈ Введи дату рождения (день и месяц)\nПример: *15.04*",
     "horoscope_error":"❌ Неверный формат. Попробуй: *15.04*",
-    # Quiz
     "quiz_start":"🧠 *Космовикторина*\n\n10 вопросов о космосе.\nГотов проверить знания?",
     "quiz_btn_start":"🚀 Начать!",
     "quiz_next":"➡️ Следующий",
@@ -256,13 +434,10 @@ T = {
     "quiz_correct":"Правильно! ✅",
     "quiz_wrong":"Неверно ❌. Правильный ответ:",
     "quiz_result":"🏆 *Результат: {score}/10*\n\n{grade}",
-    # Capsule
     "capsule_ask":"⏳ *Капсула времени*\n\nНапиши послание себе в будущем (до 2000 символов).\nОно придёт тебе ровно через год! ✨",
     "capsule_saved":"✅ *Капсула сохранена!*\n\n📅 Откроется: *{date}*\n\n🚀 Через год я напомню тебе об этом послании!",
     "capsule_cancel":"❌ Отменено",
-    # Space name
     "name_gen_title":"👨‍🚀 *Твоё космическое имя*\n\n",
-    # Notifications
     "notif_title":"🔔 *Управление уведомлениями*\n\nВыбери, о чём хочешь получать оповещения:",
     "notif_subscribed":"✅ Подписка активирована",
     "notif_unsubscribed":"🔕 Подписка отключена",
@@ -271,13 +446,9 @@ T = {
     "notif_sub_sw":"🌞 Космическая погода (Kp≥5)",
     "notif_sub_lunar":"🌕 Фазы Луны",
     "notif_sub_news":"📰 Новости NASA",
-    # Mars rover live
     "mars_rover_title":"🤖 *Марсоходы — статус*\n\n",
-    # Lunar calendar
     "lunar_cal_title":"📅 *Лунный календарь*\n\n",
-    # NASA TV
     "nasa_tv_title":"📺 *NASA TV*\n\n🔴 [Прямой эфир](https://www.nasa.gov/nasatv)\n\nСмотри запуски, МКС и пресс-конференции в прямом эфире!",
-    # photo/gallery buttons
     "btn_apod":"🌌 Фото дня","btn_apod_rnd":"🎲 Случайное","btn_gallery":"🖼 Галерея","btn_hubble":"🔬 Хаббл",
     "btn_mars":"🤖 Марс","btn_mars_rv":"🤖 Марсоходы","btn_epic":"🌍 Земля из космоса","btn_earth_night":"🌃 Земля ночью",
     "btn_nebulae":"💫 Туманности","btn_clusters":"✨ Скопления","btn_eclipse":"🌑 Затмения","btn_jwst":"🔭 Джеймс Уэбб",
@@ -563,14 +734,24 @@ T = {
     "btn_geomag":"🔴 عواصف","btn_sunspot":"🔴 بقع","btn_live_epic":"🔴 EPIC","btn_sat_count":"🔴 أقمار",
 },
 }
+# ── End: TRANSLATIONS ─────────────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: TRANSLATION & UTILITY HELPERS                                          ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 def tx(lang, key, **kw):
     val = T.get(lang, T["en"]).get(key) or T["en"].get(key) or key
     return val.format(**kw) if kw else val
 
 def get_lang(ctx): return ctx.user_data.get("lang", "ru")
 def strip_html(t): return re.sub(r'<[^>]+>', '', t or '')
+# ── End: TRANSLATION & UTILITY HELPERS ────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: NASA API & HTTP HELPERS                                                 ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 def nasa_req(path, params=None):
     p = {"api_key": NASA_API_KEY}
     if params: p.update(params)
@@ -580,8 +761,12 @@ def nasa_req(path, params=None):
 def get_json(url, params=None, timeout=12):
     r = requests.get(url, params=params, timeout=timeout)
     r.raise_for_status(); return r.json()
+# ── End: NASA API & HTTP HELPERS ──────────────────────────────────────────────
 
-# ── ISS position helper with dual-API fallback ────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: ISS POSITION & CREW HELPERS (dual-API fallback)                        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 def get_iss_position() -> dict:
     """Try wheretheiss.at first (reliable), fall back to open-notify.org."""
     for url, parser in [
@@ -609,8 +794,12 @@ def get_iss_crew() -> list:
     except Exception:
         pass
     return []
+# ── End: ISS POSITION & CREW HELPERS ─────────────────────────────────────────
 
-# ── Simple in-memory cache (30 min TTL) ──────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: IN-MEMORY CACHE (30-minute TTL)                                        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 _cache: dict = {}
 CACHE_TTL = 1800
 
@@ -623,25 +812,36 @@ def cache_get(key: str):
 
 def cache_set(key: str, data):
     _cache[key] = (datetime.utcnow().timestamp(), data)
+# ── End: IN-MEMORY CACHE ──────────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: TELEGRAM MESSAGE HELPERS (safe_answer, safe_edit, del_msg)             ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def safe_answer(q):
     try: await q.answer()
     except: pass
 
 async def safe_edit(q, text, reply_markup=None):
     try:
-        await q.edit_message_text(text, parse_mode="Markdown", reply_markup=reply_markup, disable_web_page_preview=True)
+        await q.edit_message_text(text, parse_mode="Markdown",
+                                   reply_markup=reply_markup, disable_web_page_preview=True)
     except:
         try: await q.message.delete()
         except: pass
-        try: await q.message.chat.send_message(text, parse_mode="Markdown", reply_markup=reply_markup, disable_web_page_preview=True)
+        try: await q.message.chat.send_message(text, parse_mode="Markdown",
+                                                reply_markup=reply_markup, disable_web_page_preview=True)
         except: pass
 
 async def del_msg(q):
     try: await q.message.delete()
     except: pass
+# ── End: TELEGRAM MESSAGE HELPERS ─────────────────────────────────────────────
 
-# ── KEYBOARDS ─────────────────────────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: INLINE KEYBOARDS                                                        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 def lang_kb():
     return InlineKeyboardMarkup([[
         InlineKeyboardButton("🇷🇺 Русский", callback_data="setlang_ru"),
@@ -670,103 +870,148 @@ def main_menu_kb(lang):
 def back_kb(lang, refresh=None, ctx=None):
     rows = []
     if refresh:
-        rows.append([InlineKeyboardButton(tx(lang,"btn_refresh"), callback_data=refresh)])
+        rows.append([InlineKeyboardButton(tx(lang, "btn_refresh"), callback_data=refresh)])
     row = []
     if ctx and ctx.user_data.get("last_cat"):
-        row.append(InlineKeyboardButton(tx(lang,"back_cat"), callback_data=ctx.user_data["last_cat"]))
-    row.append(InlineKeyboardButton(tx(lang,"back_menu"), callback_data="back"))
+        row.append(InlineKeyboardButton(tx(lang, "back_cat"), callback_data=ctx.user_data["last_cat"]))
+    row.append(InlineKeyboardButton(tx(lang, "back_menu"), callback_data="back"))
     rows.append(row)
     return InlineKeyboardMarkup(rows)
 
 def action_kb(lang, cb, label="btn_another", ctx=None):
-    row = [InlineKeyboardButton(tx(lang,label), callback_data=cb)]
+    row = [InlineKeyboardButton(tx(lang, label), callback_data=cb)]
     if ctx and ctx.user_data.get("last_cat"):
-        row.append(InlineKeyboardButton(tx(lang,"back_cat"), callback_data=ctx.user_data["last_cat"]))
-    row.append(InlineKeyboardButton(tx(lang,"back_menu"), callback_data="back"))
+        row.append(InlineKeyboardButton(tx(lang, "back_cat"), callback_data=ctx.user_data["last_cat"]))
+    row.append(InlineKeyboardButton(tx(lang, "back_menu"), callback_data="back"))
     return InlineKeyboardMarkup([row])
 
 def cat_photo_kb(lang):
-    L = lambda k: tx(lang,k)
+    L = lambda k: tx(lang, k)
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(L("btn_apod"),callback_data="apod"), InlineKeyboardButton(L("btn_apod_rnd"),callback_data="apod_random")],
-        [InlineKeyboardButton(L("btn_gallery"),callback_data="gallery"), InlineKeyboardButton(L("btn_hubble"),callback_data="deepspace")],
-        [InlineKeyboardButton(L("btn_mars"),callback_data="mars"), InlineKeyboardButton(L("btn_mars_rv"),callback_data="mars_rovers")],
-        [InlineKeyboardButton(L("btn_epic"),callback_data="epic"), InlineKeyboardButton(L("btn_earth_night"),callback_data="earth_night")],
-        [InlineKeyboardButton(L("btn_nebulae"),callback_data="nebulae"), InlineKeyboardButton(L("btn_clusters"),callback_data="clusters")],
-        [InlineKeyboardButton(L("btn_eclipse"),callback_data="eclipse"), InlineKeyboardButton(L("btn_jwst"),callback_data="jwst_gallery")],
-        [InlineKeyboardButton(L("btn_moon_gal"),callback_data="moon_gallery"), InlineKeyboardButton(L("btn_blue_marble"),callback_data="blue_marble")],
-        [InlineKeyboardButton(L("btn_spacewalks"),callback_data="spacewalks")],
-        [InlineKeyboardButton(L("back_menu"),callback_data="back")],
+        [InlineKeyboardButton(L("btn_apod"),        callback_data="apod"),
+         InlineKeyboardButton(L("btn_apod_rnd"),    callback_data="apod_random")],
+        [InlineKeyboardButton(L("btn_gallery"),     callback_data="gallery"),
+         InlineKeyboardButton(L("btn_hubble"),      callback_data="deepspace")],
+        [InlineKeyboardButton(L("btn_mars"),        callback_data="mars"),
+         InlineKeyboardButton(L("btn_mars_rv"),     callback_data="mars_rovers")],
+        [InlineKeyboardButton(L("btn_epic"),        callback_data="epic"),
+         InlineKeyboardButton(L("btn_earth_night"), callback_data="earth_night")],
+        [InlineKeyboardButton(L("btn_nebulae"),     callback_data="nebulae"),
+         InlineKeyboardButton(L("btn_clusters"),    callback_data="clusters")],
+        [InlineKeyboardButton(L("btn_eclipse"),     callback_data="eclipse"),
+         InlineKeyboardButton(L("btn_jwst"),        callback_data="jwst_gallery")],
+        [InlineKeyboardButton(L("btn_moon_gal"),    callback_data="moon_gallery"),
+         InlineKeyboardButton(L("btn_blue_marble"), callback_data="blue_marble")],
+        [InlineKeyboardButton(L("btn_spacewalks"),  callback_data="spacewalks")],
+        [InlineKeyboardButton(L("back_menu"),       callback_data="back")],
     ])
 
 def cat_solarsys_kb(lang):
-    L = lambda k: tx(lang,k)
+    L = lambda k: tx(lang, k)
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(L("btn_planets"),callback_data="planets"), InlineKeyboardButton(L("btn_giants"),callback_data="giants")],
-        [InlineKeyboardButton(L("btn_dwarfs"),callback_data="dwarfplanets"), InlineKeyboardButton(L("btn_moons"),callback_data="moons")],
-        [InlineKeyboardButton(L("btn_asteroids"),callback_data="asteroids"), InlineKeyboardButton(L("btn_comets"),callback_data="comets")],
-        [InlineKeyboardButton(L("btn_moon"),callback_data="moon"), InlineKeyboardButton(L("btn_meteors"),callback_data="meteors")],
-        [InlineKeyboardButton(L("btn_sun"),callback_data="sun"), InlineKeyboardButton(L("btn_spaceweather"),callback_data="spaceweather")],
-        [InlineKeyboardButton(L("btn_ceres"),callback_data="ceres"), InlineKeyboardButton(L("btn_pluto"),callback_data="pluto_close")],
-        [InlineKeyboardButton(L("btn_kuiper"),callback_data="kuiper_belt"), InlineKeyboardButton(L("btn_alignment"),callback_data="planet_alignment")],
-        [InlineKeyboardButton(L("btn_solar_ecl"),callback_data="solar_eclipse"), InlineKeyboardButton(L("btn_scale"),callback_data="orbital_scale")],
-        [InlineKeyboardButton(L("btn_lunar_miss"),callback_data="lunar_missions")],
-        [InlineKeyboardButton(L("back_menu"),callback_data="back")],
+        [InlineKeyboardButton(L("btn_planets"),    callback_data="planets"),
+         InlineKeyboardButton(L("btn_giants"),     callback_data="giants")],
+        [InlineKeyboardButton(L("btn_dwarfs"),     callback_data="dwarfplanets"),
+         InlineKeyboardButton(L("btn_moons"),      callback_data="moons")],
+        [InlineKeyboardButton(L("btn_asteroids"),  callback_data="asteroids"),
+         InlineKeyboardButton(L("btn_comets"),     callback_data="comets")],
+        [InlineKeyboardButton(L("btn_moon"),       callback_data="moon"),
+         InlineKeyboardButton(L("btn_meteors"),    callback_data="meteors")],
+        [InlineKeyboardButton(L("btn_sun"),        callback_data="sun"),
+         InlineKeyboardButton(L("btn_spaceweather"), callback_data="spaceweather")],
+        [InlineKeyboardButton(L("btn_ceres"),      callback_data="ceres"),
+         InlineKeyboardButton(L("btn_pluto"),      callback_data="pluto_close")],
+        [InlineKeyboardButton(L("btn_kuiper"),     callback_data="kuiper_belt"),
+         InlineKeyboardButton(L("btn_alignment"),  callback_data="planet_alignment")],
+        [InlineKeyboardButton(L("btn_solar_ecl"),  callback_data="solar_eclipse"),
+         InlineKeyboardButton(L("btn_scale"),      callback_data="orbital_scale")],
+        [InlineKeyboardButton(L("btn_lunar_miss"), callback_data="lunar_missions")],
+        [InlineKeyboardButton(L("back_menu"),      callback_data="back")],
     ])
 
 def cat_deepspace_kb(lang):
-    L = lambda k: tx(lang,k)
+    L = lambda k: tx(lang, k)
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(L("btn_deepspace"),callback_data="deepspace"), InlineKeyboardButton(L("btn_milkyway"),callback_data="milkyway")],
-        [InlineKeyboardButton(L("btn_blackholes"),callback_data="blackholes"), InlineKeyboardButton(L("btn_supernovae"),callback_data="supernovae")],
-        [InlineKeyboardButton(L("btn_pulsars"),callback_data="pulsars"), InlineKeyboardButton(L("btn_nearstars"),callback_data="nearstars")],
-        [InlineKeyboardButton(L("btn_exoplanets"),callback_data="exoplanets"), InlineKeyboardButton(L("btn_seti"),callback_data="seti")],
-        [InlineKeyboardButton(L("btn_gravwaves"),callback_data="gravwaves"), InlineKeyboardButton(L("btn_darkmatter"),callback_data="darkmatter")],
-        [InlineKeyboardButton(L("btn_future"),callback_data="future"), InlineKeyboardButton(L("btn_radioastro"),callback_data="radioastro")],
-        [InlineKeyboardButton(L("btn_quasars"),callback_data="quasars"), InlineKeyboardButton(L("btn_grb"),callback_data="grb")],
-        [InlineKeyboardButton(L("btn_cmb"),callback_data="cmb"), InlineKeyboardButton(L("btn_gal_coll"),callback_data="galaxy_collision")],
-        [InlineKeyboardButton(L("btn_starform"),callback_data="star_formation"), InlineKeyboardButton(L("btn_dark_en"),callback_data="dark_energy")],
-        [InlineKeyboardButton(L("btn_cosm_web"),callback_data="cosmic_web"), InlineKeyboardButton(L("btn_red_giants"),callback_data="red_giants")],
-        [InlineKeyboardButton(L("back_menu"),callback_data="back")],
+        [InlineKeyboardButton(L("btn_deepspace"),  callback_data="deepspace"),
+         InlineKeyboardButton(L("btn_milkyway"),   callback_data="milkyway")],
+        [InlineKeyboardButton(L("btn_blackholes"), callback_data="blackholes"),
+         InlineKeyboardButton(L("btn_supernovae"), callback_data="supernovae")],
+        [InlineKeyboardButton(L("btn_pulsars"),    callback_data="pulsars"),
+         InlineKeyboardButton(L("btn_nearstars"),  callback_data="nearstars")],
+        [InlineKeyboardButton(L("btn_exoplanets"), callback_data="exoplanets"),
+         InlineKeyboardButton(L("btn_seti"),       callback_data="seti")],
+        [InlineKeyboardButton(L("btn_gravwaves"),  callback_data="gravwaves"),
+         InlineKeyboardButton(L("btn_darkmatter"), callback_data="darkmatter")],
+        [InlineKeyboardButton(L("btn_future"),     callback_data="future"),
+         InlineKeyboardButton(L("btn_radioastro"), callback_data="radioastro")],
+        [InlineKeyboardButton(L("btn_quasars"),    callback_data="quasars"),
+         InlineKeyboardButton(L("btn_grb"),        callback_data="grb")],
+        [InlineKeyboardButton(L("btn_cmb"),        callback_data="cmb"),
+         InlineKeyboardButton(L("btn_gal_coll"),   callback_data="galaxy_collision")],
+        [InlineKeyboardButton(L("btn_starform"),   callback_data="star_formation"),
+         InlineKeyboardButton(L("btn_dark_en"),    callback_data="dark_energy")],
+        [InlineKeyboardButton(L("btn_cosm_web"),   callback_data="cosmic_web"),
+         InlineKeyboardButton(L("btn_red_giants"), callback_data="red_giants")],
+        [InlineKeyboardButton(L("back_menu"),      callback_data="back")],
     ])
 
 def cat_earth_kb(lang):
-    L = lambda k: tx(lang,k)
+    L = lambda k: tx(lang, k)
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(L("btn_epic"),callback_data="epic"), InlineKeyboardButton(L("btn_climate"),callback_data="climate")],
-        [InlineKeyboardButton(L("btn_volcanoes"),callback_data="volcanoes"), InlineKeyboardButton(L("btn_hurricanes"),callback_data="hurricanes")],
-        [InlineKeyboardButton(L("btn_aurora"),callback_data="aurora"), InlineKeyboardButton(L("btn_magneto"),callback_data="magnetosphere")],
-        [InlineKeyboardButton(L("btn_satellites"),callback_data="satellites"), InlineKeyboardButton(L("btn_debris"),callback_data="debris")],
-        [InlineKeyboardButton(L("btn_wildfires"),callback_data="wildfires"), InlineKeyboardButton(L("btn_ice"),callback_data="ice_sheets")],
-        [InlineKeyboardButton(L("btn_deforest"),callback_data="deforestation"), InlineKeyboardButton(L("btn_nightlights"),callback_data="night_lights")],
-        [InlineKeyboardButton(L("btn_ozone"),callback_data="ozone"), InlineKeyboardButton(L("btn_ocean_temp"),callback_data="ocean_temp")],
-        [InlineKeyboardButton(L("btn_ocean_cur"),callback_data="ocean_currents"), InlineKeyboardButton(L("btn_tornadoes"),callback_data="tornadoes")],
-        [InlineKeyboardButton(L("back_menu"),callback_data="back")],
+        [InlineKeyboardButton(L("btn_epic"),       callback_data="epic"),
+         InlineKeyboardButton(L("btn_climate"),    callback_data="climate")],
+        [InlineKeyboardButton(L("btn_volcanoes"),  callback_data="volcanoes"),
+         InlineKeyboardButton(L("btn_hurricanes"), callback_data="hurricanes")],
+        [InlineKeyboardButton(L("btn_aurora"),     callback_data="aurora"),
+         InlineKeyboardButton(L("btn_magneto"),    callback_data="magnetosphere")],
+        [InlineKeyboardButton(L("btn_satellites"), callback_data="satellites"),
+         InlineKeyboardButton(L("btn_debris"),     callback_data="debris")],
+        [InlineKeyboardButton(L("btn_wildfires"),  callback_data="wildfires"),
+         InlineKeyboardButton(L("btn_ice"),        callback_data="ice_sheets")],
+        [InlineKeyboardButton(L("btn_deforest"),   callback_data="deforestation"),
+         InlineKeyboardButton(L("btn_nightlights"),callback_data="night_lights")],
+        [InlineKeyboardButton(L("btn_ozone"),      callback_data="ozone"),
+         InlineKeyboardButton(L("btn_ocean_temp"), callback_data="ocean_temp")],
+        [InlineKeyboardButton(L("btn_ocean_cur"),  callback_data="ocean_currents"),
+         InlineKeyboardButton(L("btn_tornadoes"),  callback_data="tornadoes")],
+        [InlineKeyboardButton(L("back_menu"),      callback_data="back")],
     ])
 
 def cat_science_kb(lang):
-    L = lambda k: tx(lang,k)
+    L = lambda k: tx(lang, k)
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(L("btn_launches"),callback_data="launches"), InlineKeyboardButton(L("btn_missions"),callback_data="missions")],
-        [InlineKeyboardButton(L("btn_history"),callback_data="history"), InlineKeyboardButton(L("btn_iss"),callback_data="iss")],
-        [InlineKeyboardButton(L("btn_telescopes"),callback_data="telescopes"), InlineKeyboardButton(L("btn_sp_stations"),callback_data="space_stations")],
-        [InlineKeyboardButton(L("btn_moon_sites"),callback_data="moon_landing_sites"), InlineKeyboardButton(L("btn_women"),callback_data="women_in_space")],
-        [InlineKeyboardButton(L("btn_mars_col"),callback_data="mars_colonization"), InlineKeyboardButton(L("btn_sp_med"),callback_data="space_medicine")],
-        [InlineKeyboardButton(L("btn_rockets"),callback_data="rocket_engines"), InlineKeyboardButton(L("btn_training"),callback_data="astronaut_training")],
-        [InlineKeyboardButton(L("btn_records"),callback_data="space_records"), InlineKeyboardButton(L("btn_food"),callback_data="space_food")],
-        [InlineKeyboardButton(L("back_menu"),callback_data="back")],
+        [InlineKeyboardButton(L("btn_launches"),   callback_data="launches"),
+         InlineKeyboardButton(L("btn_missions"),   callback_data="missions")],
+        [InlineKeyboardButton(L("btn_history"),    callback_data="history"),
+         InlineKeyboardButton(L("btn_iss"),        callback_data="iss")],
+        [InlineKeyboardButton(L("btn_telescopes"), callback_data="telescopes"),
+         InlineKeyboardButton(L("btn_sp_stations"),callback_data="space_stations")],
+        [InlineKeyboardButton(L("btn_moon_sites"), callback_data="moon_landing_sites"),
+         InlineKeyboardButton(L("btn_women"),      callback_data="women_in_space")],
+        # FIX: mars_colonization is now properly handled in STATIC_TEXTS + IMG_MAP
+        [InlineKeyboardButton(L("btn_mars_col"),   callback_data="mars_colonization"),
+         InlineKeyboardButton(L("btn_sp_med"),     callback_data="space_medicine")],
+        [InlineKeyboardButton(L("btn_rockets"),    callback_data="rocket_engines"),
+         InlineKeyboardButton(L("btn_training"),   callback_data="astronaut_training")],
+        [InlineKeyboardButton(L("btn_records"),    callback_data="space_records"),
+         InlineKeyboardButton(L("btn_food"),       callback_data="space_food")],
+        [InlineKeyboardButton(L("back_menu"),      callback_data="back")],
     ])
 
 def cat_live_kb(lang):
-    L = lambda k: tx(lang,k)
+    L = lambda k: tx(lang, k)
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(L("btn_solar_wind"),callback_data="live_solar_wind")],
-        [InlineKeyboardButton(L("btn_kp"),callback_data="live_kp"), InlineKeyboardButton(L("btn_flares"),callback_data="live_flares")],
-        [InlineKeyboardButton(L("btn_live_iss"),callback_data="live_iss"), InlineKeyboardButton(L("btn_radiation"),callback_data="live_radiation")],
-        [InlineKeyboardButton(L("btn_aurora_f"),callback_data="live_aurora_forecast"), InlineKeyboardButton(L("btn_geomag"),callback_data="live_geomagnetic_alert")],
-        [InlineKeyboardButton(L("btn_sunspot"),callback_data="live_sunspot"), InlineKeyboardButton(L("btn_live_epic"),callback_data="live_epic_latest")],
-        [InlineKeyboardButton(L("btn_sat_count"),callback_data="live_satellite_count")],
-        [InlineKeyboardButton(L("back_menu"),callback_data="back")],
+        [InlineKeyboardButton(L("btn_solar_wind"),  callback_data="live_solar_wind")],
+        [InlineKeyboardButton(L("btn_kp"),          callback_data="live_kp"),
+         InlineKeyboardButton(L("btn_flares"),      callback_data="live_flares")],
+        [InlineKeyboardButton(L("btn_live_iss"),    callback_data="live_iss"),
+         InlineKeyboardButton(L("btn_radiation"),   callback_data="live_radiation")],
+        [InlineKeyboardButton(L("btn_aurora_f"),    callback_data="live_aurora_forecast"),
+         InlineKeyboardButton(L("btn_geomag"),      callback_data="live_geomagnetic_alert")],
+        [InlineKeyboardButton(L("btn_sunspot"),     callback_data="live_sunspot"),
+         InlineKeyboardButton(L("btn_live_epic"),   callback_data="live_epic_latest")],
+        [InlineKeyboardButton(L("btn_sat_count"),   callback_data="live_satellite_count")],
+        [InlineKeyboardButton(L("back_menu"),       callback_data="back")],
     ])
 
 def cat_interact_kb(lang):
@@ -799,22 +1044,22 @@ def cat_news_kb(lang):
 def news_article_kb(lang, source_key, idx, total, article_link):
     rows = []
     if total > 1:
-        next_idx = idx + 1 if idx + 1 < total else 0
+        next_idx = (idx + 1) % total
         rows.append([InlineKeyboardButton(
             f"{tx(lang,'btn_news_next')} ({next_idx+1}/{total})",
             callback_data=f"news_page_{source_key}_{next_idx}"
         )])
     src_row = []
     if article_link:
-        src_row.append(InlineKeyboardButton(tx(lang,"btn_news_source"), url=article_link))
-    src_row.append(InlineKeyboardButton(tx(lang,"back_menu"), callback_data="back"))
+        src_row.append(InlineKeyboardButton(tx(lang, "btn_news_source"), url=article_link))
+    src_row.append(InlineKeyboardButton(tx(lang, "back_menu"), callback_data="back"))
     rows.append(src_row)
     return InlineKeyboardMarkup(rows)
 
 def notifications_kb(lang, subs, chat_id):
     def btn(key, cb):
-        label = tx(lang, key)
-        topic = cb.replace("notif_toggle_","")
+        label  = tx(lang, key)
+        topic  = cb.replace("notif_toggle_", "")
         status = "✅" if chat_id in subs.get(topic, []) else "🔔"
         return InlineKeyboardButton(f"{status} {label}", callback_data=cb)
     return InlineKeyboardMarkup([
@@ -823,19 +1068,24 @@ def notifications_kb(lang, subs, chat_id):
         [btn("notif_sub_sw",     "notif_toggle_space_weather")],
         [btn("notif_sub_lunar",  "notif_toggle_lunar")],
         [btn("notif_sub_news",   "notif_toggle_nasa_news")],
-        [InlineKeyboardButton(tx(lang,"back_menu"), callback_data="back")],
+        [InlineKeyboardButton(tx(lang, "back_menu"), callback_data="back")],
     ])
 
 def quiz_kb(lang, q_index, answered=False):
     if answered:
         nxt   = "quiz_next" if q_index < 9 else "quiz_finish"
-        label = tx(lang,"quiz_next") if q_index < 9 else tx(lang,"quiz_finish")
+        label = tx(lang, "quiz_next") if q_index < 9 else tx(lang, "quiz_finish")
         return InlineKeyboardMarkup([[InlineKeyboardButton(label, callback_data=nxt)]])
     opts = QUIZ_QUESTIONS[q_index]["options"]
-    rows = [[InlineKeyboardButton(opt, callback_data=f"quiz_ans_{q_index}_{i}")] for i,opt in enumerate(opts)]
+    rows = [[InlineKeyboardButton(opt, callback_data=f"quiz_ans_{q_index}_{i}")]
+            for i, opt in enumerate(opts)]
     return InlineKeyboardMarkup(rows)
+# ── End: INLINE KEYBOARDS ─────────────────────────────────────────────────────
 
-# ── DATA ──────────────────────────────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: STATIC DATA (planets, facts, showers, exoplanets, gravity, zodiac…)   ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 PLANETS = [
     {"name":"☿ Mercury","dist":"57.9M km","period":"88d","day":"58.6d","temp":"-180/+430°C","moons":0,"radius":"2440km","fact":{"ru":"Самый большой перепад температур.","en":"Largest temperature range.","he":"הפרש הטמפרטורות הגדול ביותר.","ar":"أكبر مدى حراري."}},
     {"name":"♀ Venus","dist":"108M km","period":"225d","day":"243d","temp":"+465°C","moons":0,"radius":"6051km","fact":{"ru":"Горячее Меркурия. Вращается обратно.","en":"Hotter than Mercury. Spins backwards.","he":"חמה ממרקורי. מסתובבת הפוך.","ar":"أحر من عطارد. تدور عكسياً."}},
@@ -854,13 +1104,13 @@ SPACE_FACTS = {
     "ar":["🌌 عمر الكون ~13.8 مليار سنة.","⭐ نجوم أكثر من حبات الرمل.","🌑 آثار أرمسترونغ ملايين السنين.","☀️ ضوء الشمس 8 دقائق و20 ثانية.","🪐 يوم الزهرة أطول من سنتها.","🌊 إنسيلادوس لديه ينابيع.","⚫ الأرض بحجم رخامة = ثقب أسود.","🚀 فوياجر 1 — 2012."],
 }
 
-METEOR_SHOWERS=[
+METEOR_SHOWERS = [
     {"name":{"ru":"Персеиды","en":"Perseids","he":"פרסאידים","ar":"البرشاويات"},"peak":"12-13 Aug","rate":"100+/h","parent":"Swift-Tuttle","speed":"59km/s"},
     {"name":{"ru":"Геминиды","en":"Geminids","he":"גמינידים","ar":"الجوزائيات"},"peak":"13-14 Dec","rate":"120+/h","parent":"3200 Phaethon","speed":"35km/s"},
     {"name":{"ru":"Леониды","en":"Leonids","he":"ליאונידים","ar":"الأسديات"},"peak":"17-18 Nov","rate":"10-15/h","parent":"Tempel-Tuttle","speed":"71km/s"},
 ]
 
-KNOWN_EXOPLANETS=[
+KNOWN_EXOPLANETS = [
     {"name":"Kepler-452b","star":"Kepler-452","year":2015,"radius":1.63,"period":384.8,"dist_ly":1400,"note":{"ru":"Двойник Земли","en":"Earth twin","he":"כפיל כדור הארץ","ar":"توأم الأرض"}},
     {"name":"TRAPPIST-1e","star":"TRAPPIST-1","year":2017,"radius":0.92,"period":6.1,"dist_ly":39,"note":{"ru":"Возможна жидкая вода","en":"Possible liquid water","he":"מים נוזליים אפשריים","ar":"ماء سائل محتمل"}},
     {"name":"Proxima Centauri b","star":"Proxima Cen","year":2016,"radius":1.3,"period":11.2,"dist_ly":4.2,"note":{"ru":"Ближайшая экзопланета!","en":"Nearest exoplanet!","he":"הקרובה ביותר!","ar":"الأقرب!"}},
@@ -964,37 +1214,52 @@ QUIZ_QUESTIONS = [
      "options":["Titan","Mimas","Enceladus","Rhea"],"answer":2,
      "exp":{"ru":"Энцелад — гейзеры из южного полюса.","en":"Enceladus — geysers from south pole.","he":"אנקלדוס — גייזרים מהקוטב הדרומי.","ar":"إنسيلادوس — ينابيع من القطب الجنوبي."}},
 ]
+# ── End: STATIC DATA ──────────────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: MOON PHASE & ZODIAC HELPERS                                            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 def get_moon_phase(for_date):
     known_new  = date(2024, 1, 11)
     cycle_day  = (for_date - known_new).days % 29.53
-    if   cycle_day < 1.85:  emoji,idx = "🌑",0
-    elif cycle_day < 7.38:  emoji,idx = "🌒",1
-    elif cycle_day < 9.22:  emoji,idx = "🌓",2
-    elif cycle_day < 14.77: emoji,idx = "🌔",3
-    elif cycle_day < 16.61: emoji,idx = "🌕",4
-    elif cycle_day < 22.15: emoji,idx = "🌖",5
-    elif cycle_day < 23.99: emoji,idx = "🌗",6
-    else:                   emoji,idx = "🌘",7
+    if   cycle_day < 1.85:  emoji, idx = "🌑", 0
+    elif cycle_day < 7.38:  emoji, idx = "🌒", 1
+    elif cycle_day < 9.22:  emoji, idx = "🌓", 2
+    elif cycle_day < 14.77: emoji, idx = "🌔", 3
+    elif cycle_day < 16.61: emoji, idx = "🌕", 4
+    elif cycle_day < 22.15: emoji, idx = "🌖", 5
+    elif cycle_day < 23.99: emoji, idx = "🌗", 6
+    else:                   emoji, idx = "🌘", 7
     illum = round((1 - abs(cycle_day - 14.77) / 14.77) * 100)
     return emoji, idx, cycle_day, illum
 
 def get_zodiac(month, day):
-    for (sm,sd),(em,ed),sign in ZODIAC_RANGES:
-        if (month==sm and day>=sd) or (month==em and day<=ed): return sign
+    for (sm, sd), (em, ed), sign in ZODIAC_RANGES:
+        if (month == sm and day >= sd) or (month == em and day <= ed): return sign
     return "Aries"
+# ── End: MOON PHASE & ZODIAC HELPERS ─────────────────────────────────────────
 
-EARTH_Q   = ["earth from space nasa","earth orbit ISS view","earth blue marble","earth from satellite"]
-GALLERY_Q = ["nebula","galaxy","supernova","aurora","saturn rings","jupiter","andromeda galaxy"]
-MARS_Q    = ["mars surface curiosity","mars landscape nasa","mars perseverance"]
-ROVER_NAMES = ["curiosity","perseverance"]
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: IMAGE QUERY CONSTANTS                                                   ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+EARTH_Q   = ["earth from space nasa", "earth orbit ISS view", "earth blue marble", "earth from satellite"]
+GALLERY_Q = ["nebula", "galaxy", "supernova", "aurora", "saturn rings", "jupiter", "andromeda galaxy"]
+MARS_Q    = ["mars surface curiosity", "mars landscape nasa", "mars perseverance"]
+ROVER_NAMES = ["curiosity", "perseverance"]
 MARS_FACTS = {
-    "ru":["Олимп — 21 км!","Curiosity проехал >33 км.","Сутки — 24 ч 37 мин.","Гравитация 38%."],
-    "en":["Olympus Mons 21km!","Curiosity >33km.","Day — 24h 37min.","Gravity 38%."],
-    "he":["הר אולימפוס 21 ק\"מ.","קיוריוסיטי >33 ק\"מ.","יום — 24:37.","כבידה 38%."],
-    "ar":["أوليمبوس 21 كم.","كيوريوسيتي >33 كم.","اليوم 24:37.","جاذبية 38%."]
+    "ru": ["Олимп — 21 км!", "Curiosity проехал >33 км.", "Сутки — 24 ч 37 мин.", "Гравитация 38%."],
+    "en": ["Olympus Mons 21km!", "Curiosity >33km.", "Day — 24h 37min.", "Gravity 38%."],
+    "he": ["הר אולימפוס 21 ק\"מ.", "קיוריוסיטי >33 ק\"מ.", "יום — 24:37.", "כבידה 38%."],
+    "ar": ["أوليمبوس 21 كم.", "كيوريوسيتي >33 كم.", "اليوم 24:37.", "جاذبية 38%."]
 }
+# ── End: IMAGE QUERY CONSTANTS ────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: STATIC TEXT CONTENT (science/history/deepspace articles)               ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 STATIC_TEXTS = {
     "kuiper_belt":    {"ru":"📦 *Пояс Койпера*\n\nОбласть за Нептуном. Плутон, Эрида, Макемаке.\nNew Horizons посетил Плутон (2015) и Аррокот (2019).","en":"📦 *Kuiper Belt*\n\nBeyond Neptune. Pluto, Eris, Makemake.\nNew Horizons visited Pluto (2015) & Arrokoth (2019).","he":"📦 *חגורת קויפר*\n\nמעבר לנפטון. פלוטו, אריס, מאקמאקה.","ar":"📦 *حزام كويبر*\n\nوراء نبتون. بلوتو، إيريس، ماكيماكي."},
     "planet_alignment":{"ru":"🪐 *Парад планет*\n\nМарс, Юпитер, Сатурн видны без телескопа. Полный парад (все 8) — раз в сотни лет.","en":"🪐 *Planet Parade*\n\nMars, Jupiter, Saturn — naked eye. Full parade (all 8) every few hundred years.","he":"🪐 *מצעד כוכבים*\n\nמאדים, צדק, שבתאי — ללא טלסקופ.","ar":"🪐 *استعراض الكواكب*\n\nالمريخ، المشتري، زحل — بالعين."},
@@ -1011,7 +1276,9 @@ STATIC_TEXTS = {
     "ocean_currents": {"ru":"🌊 *Течения*\n\nГольфстрим, Куросио — переносят тепло, влияют на климат.","en":"🌊 *Ocean Currents*\n\nGulf Stream, Kuroshio — transport heat, affect climate.","he":"🌊 *זרמים*\n\nזרם המפרץ, קורושיו.","ar":"🌊 *التيارات*\n\nتيار الخليج، كوروشيو."},
     "space_stations": {"ru":"🛸 *Станции*\n\n• *МКС* (с 1998) — 420 т, 408 км\n• *Тяньгун (Китай)* — НОО\n• *Gateway* (~2028) — у Луны","en":"🛸 *Space Stations*\n\n• *ISS* (1998) — 420t, 408km\n• *Tiangong (China)* — LEO\n• *Gateway* (~2028) — Moon orbit","he":"🛸 *תחנות*\n\n• ISS (1998). • Tiangong. • Gateway (~2028).","ar":"🛸 *محطات*\n\n• ISS (1998). • Tiangong. • Gateway (~2028)."},
     "women_in_space": {"ru":"👩‍🚀 *Женщины*\n\n• Терешкова (1963)\n• Салли Райд (1983)\n• Савицкая (1984) — первый выход\n• Пегги Уитсон — рекорд","en":"👩‍🚀 *Women in Space*\n\n• Tereshkova (1963)\n• Sally Ride (1983)\n• Savitskaya (1984) — first EVA\n• Peggy Whitson — duration record","he":"👩‍🚀 *נשים*\n\n• טרשקובה (1963). • סאלי רייד (1983).","ar":"👩‍🚀 *نساء*\n\n• تيريشكوفا (1963). • سالي رايد (1983)."},
-    "mars_colonization":{"ru":"🔴 *Марс*\n\nSpaceX, NASA, Китай — планы 2030–2040.\nПроблемы: радиация, гравитация, ресурсы.","en":"🔴 *Mars Colonization*\n\nSpaceX, NASA, China — plans 2030–2040.\nChallenges: radiation, gravity, resources.","he":"🔴 *מאדים*\n\nSpaceX, NASA, סין — 2030–2040.","ar":"🔴 *المريخ*\n\nSpaceX، ناسا، الصين — 2030–2040."},
+    # FIX: mars_colonization was silent when NASA Image API failed;
+    # now callback_router falls back to text if image unavailable
+    "mars_colonization":{"ru":"🔴 *Марс — Колонизация*\n\nSpaceX, NASA, Китай — планы 2030–2040.\nПроблемы: радиация, гравитация 38%, ресурсы.\nStarship рассчитан на 100 человек.\n\n🔗 [SpaceX Mars](https://www.spacex.com/human-spaceflight/mars/)","en":"🔴 *Mars Colonization*\n\nSpaceX, NASA, China — plans 2030–2040.\nChallenges: radiation, 38% gravity, resources.\nStarship designed for 100 people.\n\n🔗 [SpaceX Mars](https://www.spacex.com/human-spaceflight/mars/)","he":"🔴 *מאדים — קולוניזציה*\n\nSpaceX, NASA, סין — 2030–2040.\nאתגרים: קרינה, כבידה 38%, משאבים.","ar":"🔴 *استعمار المريخ*\n\nSpaceX، ناسا، الصين — 2030–2040.\nتحديات: إشعاع، جاذبية 38٪، موارد."},
     "space_medicine":  {"ru":"🩺 *Медицина*\n\nНевесомость — потеря костной массы.\nЛимит NASA — 600 мЗв.","en":"🩺 *Space Medicine*\n\nMicrogravity — bone loss.\nNASA limit — 600 mSv.","he":"🩺 *רפואה*\n\nאובדן עצם. 600 mSv.","ar":"🩺 *طب*\n\nفقدان العظام. 600 mSv."},
     "astronaut_training":{"ru":"🎓 *Подготовка*\n\nНейтральная плавучесть, центрифуги, тренажёры. Русский/английский для МКС.","en":"🎓 *Training*\n\nNeutral buoyancy, centrifuges, simulators. Russian/English for ISS.","he":"🎓 *אימון*\n\nציפה ניטרלית, צנטריפוגות.","ar":"🎓 *التدريب*\n\nالطفو المحايد، أجهزة الطرد."},
     "debris":          {"ru":"🛰 *Мусор*\n\n~50 000 объектов. Скорость ~7.5 км/с. МКС маневрирует ~3 раза/год.","en":"🛰 *Space Debris*\n\n~50,000 objects. Speed ~7.5 km/s. ISS maneuvers ~3×/year.","he":"🛰 *פסולת*\n\n~50,000 עצמים. 7.5 ק\"מ/ש'.","ar":"🛰 *الحطام*\n\n~50,000 جسم. 7.5 كم/ث."},
@@ -1020,487 +1287,644 @@ STATIC_TEXTS = {
     "space_food":      {"ru":"🍽 *Еда в космосе*\n\nСублимированные и термостабилизированные продукты. На МКС >200 блюд. Алкоголь запрещён.","en":"🍽 *Space Food*\n\nFreeze-dried & thermostabilized. ISS has 200+ dishes. Alcohol prohibited.","he":"🍽 *אוכל בחלל*\n\nמזון מיובש בהקפאה. ISS — 200+ מנות.","ar":"🍽 *طعام الفضاء*\n\nجفف بالتجميد. ISS لديه 200+ طبق."},
     "rocket_engines":  {"ru":"🚀 *Двигатели*\n\n• Merlin (SpaceX) — 845 кН\n• RS-25 (NASA SLS) — 2090 кН\n• Raptor 3 (SpaceX) — ~2700 кН","en":"🚀 *Rocket Engines*\n\n• Merlin (SpaceX) — 845 kN\n• RS-25 (NASA SLS) — 2090 kN\n• Raptor 3 (SpaceX) — ~2700 kN","he":"🚀 *מנועים*\n\n• Merlin 845 kN • RS-25 2090 kN","ar":"🚀 *المحركات*\n\n• Merlin 845 kN • RS-25 2090 kN"},
 }
+# ── End: STATIC TEXT CONTENT ──────────────────────────────────────────────────
 
-# ── IMAGE HELPER ──────────────────────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: NASA IMAGE SEARCH HELPER                                                ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def send_nasa_image(q, ctx, queries, cb=""):
     lang = get_lang(ctx)
     try:
         r = requests.get("https://images-api.nasa.gov/search",
-            params={"q": random.choice(queries), "media_type":"image","page_size":40}, timeout=12)
+            params={"q": random.choice(queries), "media_type": "image", "page_size": 40},
+            timeout=12)
         r.raise_for_status()
-        items = [it for it in r.json().get("collection",{}).get("items",[]) if it.get("links")]
+        items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if not items:
-            await safe_edit(q, tx(lang,"no_img"), reply_markup=back_kb(lang,ctx=ctx)); return
-        item   = random.choice(items[:25])
-        data   = item.get("data",[{}])[0]
-        title  = data.get("title","NASA")
-        desc   = strip_html(data.get("description",""))[:400]
-        date_c = (data.get("date_created") or "")[:10]
-        center = data.get("center","NASA")
-        img_url= (item.get("links",[{}])[0]).get("href","")
-        caption= f"*{title}*\n📅 {date_c}  |  🏛 {center}\n\n{desc+'…' if desc else ''}"
+            await safe_edit(q, tx(lang, "no_img"), reply_markup=back_kb(lang, ctx=ctx)); return
+        item    = random.choice(items[:25])
+        data    = item.get("data", [{}])[0]
+        title   = data.get("title", "NASA")
+        desc    = strip_html(data.get("description", ""))[:400]
+        date_c  = (data.get("date_created") or "")[:10]
+        center  = data.get("center", "NASA")
+        img_url = (item.get("links", [{}])[0]).get("href", "")
+        caption = f"*{title}*\n📅 {date_c}  |  🏛 {center}\n\n{desc + '…' if desc else ''}"
         kb = action_kb(lang, cb, "btn_another", ctx) if cb else back_kb(lang, ctx=ctx)
         await del_msg(q)
         if img_url:
             try:
                 await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
-                    caption=caption[:1024], parse_mode="Markdown", reply_markup=kb); return
+                    caption=caption[:1024], parse_mode="Markdown", reply_markup=kb)
+                return
             except: pass
         await ctx.bot.send_message(chat_id=q.message.chat_id, text=caption[:4096],
             parse_mode="Markdown", reply_markup=kb, disable_web_page_preview=True)
     except Exception as e:
-        await safe_edit(q, f"{tx(lang,'err')}: `{e}`", reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q, f"{tx(lang,'err')}: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
+# ── End: NASA IMAGE SEARCH HELPER ─────────────────────────────────────────────
 
-# ── HANDLERS ──────────────────────────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: COMMAND HANDLERS (/start, /menu)                                        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(tx("ru","choose_lang"), parse_mode="Markdown", reply_markup=lang_kb())
+    await update.message.reply_text(tx("ru", "choose_lang"),
+                                    parse_mode="Markdown", reply_markup=lang_kb())
 
 async def menu_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = get_lang(context)
-    await update.message.reply_text(tx(lang,"main_menu"), parse_mode="Markdown", reply_markup=main_menu_kb(lang))
+    await update.message.reply_text(tx(lang, "main_menu"),
+                                    parse_mode="Markdown", reply_markup=main_menu_kb(lang))
 
 async def choose_lang_h(update, ctx):
-    q=update.callback_query; await safe_answer(q)
-    await safe_edit(q, tx("ru","choose_lang"), reply_markup=lang_kb())
+    q = update.callback_query; await safe_answer(q)
+    await safe_edit(q, tx("ru", "choose_lang"), reply_markup=lang_kb())
 
 async def setlang_h(update, ctx):
-    q=update.callback_query; await safe_answer(q)
+    q = update.callback_query; await safe_answer(q)
     lang = q.data.split("_")[1]; ctx.user_data["lang"] = lang
     name = q.from_user.first_name or "explorer"
-    await safe_edit(q, tx(lang,"lang_set")+"\n\n"+tx(lang,"start_msg",name=name), reply_markup=main_menu_kb(lang))
+    await safe_edit(q, tx(lang, "lang_set") + "\n\n" + tx(lang, "start_msg", name=name),
+                    reply_markup=main_menu_kb(lang))
+# ── End: COMMAND HANDLERS ─────────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: APOD HANDLER (Astronomy Picture of the Day)                             ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def _send_apod(q, ctx, params=None):
     lang = get_lang(ctx)
     try:
-        data  = nasa_req("/planetary/apod", params)
-        title = data.get("title",""); expl = strip_html(data.get("explanation",""))[:900]
-        url   = data.get("url",""); hdurl = data.get("hdurl", url)
-        mtype = data.get("media_type","image"); d = data.get("date","")
-        copy_ = data.get("copyright","NASA").strip().replace("\n"," ")
+        data    = nasa_req("/planetary/apod", params)
+        title   = data.get("title", "")
+        expl    = strip_html(data.get("explanation", ""))[:900]
+        url     = data.get("url", "")
+        hdurl   = data.get("hdurl", url)
+        mtype   = data.get("media_type", "image")
+        d       = data.get("date", "")
+        copy_   = data.get("copyright", "NASA").strip().replace("\n", " ")
         caption = f"🌌 *{title}*\n📅 {d}  |  © {copy_}\n\n{expl}…\n\n[🔗 HD]({hdurl})"
-        kb = action_kb(lang,"apod_random","btn_more_rnd",ctx) if not params else back_kb(lang,ctx=ctx)
+        kb = action_kb(lang, "apod_random", "btn_more_rnd", ctx) if not params else back_kb(lang, ctx=ctx)
         await del_msg(q)
         if mtype == "image":
-            await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=url,caption=caption[:1024],parse_mode="Markdown",reply_markup=kb)
+            await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=url,
+                caption=caption[:1024], parse_mode="Markdown", reply_markup=kb)
         else:
-            await ctx.bot.send_message(chat_id=q.message.chat_id,text=caption[:4096]+f"\n\n[▶️]({url})",parse_mode="Markdown",reply_markup=kb)
+            await ctx.bot.send_message(chat_id=q.message.chat_id,
+                text=caption[:4096] + f"\n\n[▶️]({url})", parse_mode="Markdown", reply_markup=kb)
     except Exception as e:
-        await safe_edit(q, f"{tx(lang,'err')} APOD: `{e}`", reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q, f"{tx(lang,'err')} APOD: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
 
 async def apod_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); await safe_edit(q,"⏳..."); await _send_apod(q,ctx)
+    q = update.callback_query; await safe_answer(q); await safe_edit(q, "⏳...")
+    await _send_apod(q, ctx)
 
 async def apod_random_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); await safe_edit(q,"🎲...")
-    s=date(1995,6,16); rnd=s+timedelta(days=random.randint(0,(date.today()-s).days))
-    await _send_apod(q,ctx,{"date":rnd.isoformat()})
+    q = update.callback_query; await safe_answer(q); await safe_edit(q, "🎲...")
+    s   = date(1995, 6, 16)
+    rnd = s + timedelta(days=random.randint(0, (date.today() - s).days))
+    await _send_apod(q, ctx, {"date": rnd.isoformat()})
+# ── End: APOD HANDLER ─────────────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: MARS PHOTO HANDLER                                                      ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def mars_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🤖...")
+    q = update.callback_query; await safe_answer(q); lang = get_lang(ctx); await safe_edit(q, "🤖...")
     try:
-        photos=[]
-        for sol in random.sample([100,200,300,500,750,1000,1200,1500],4):
+        photos = []
+        for sol in random.sample([100, 200, 300, 500, 750, 1000, 1200, 1500], 4):
             try:
-                r=requests.get(f"{NASA_BASE}/mars-photos/api/v1/rovers/curiosity/photos",
-                    params={"sol":sol,"api_key":NASA_API_KEY,"page":1},timeout=10)
-                if r.status_code==200:
-                    photos=r.json().get("photos",[])
+                r = requests.get(f"{NASA_BASE}/mars-photos/api/v1/rovers/curiosity/photos",
+                    params={"sol": sol, "api_key": NASA_API_KEY, "page": 1}, timeout=10)
+                if r.status_code == 200:
+                    photos = r.json().get("photos", [])
                     if photos: break
             except: continue
         if photos:
-            p=random.choice(photos[:20])
-            fact=random.choice(MARS_FACTS.get(lang,MARS_FACTS["en"]))
-            cap=(f"🤖 *{p['rover']['name']}*\n📅 {p['earth_date']}  |  Sol {p['sol']}\n"
-                 f"📷 {p['camera']['full_name']}\n\n💡 {fact}")
+            p    = random.choice(photos[:20])
+            fact = random.choice(MARS_FACTS.get(lang, MARS_FACTS["en"]))
+            cap  = (f"🤖 *{p['rover']['name']}*\n📅 {p['earth_date']}  |  Sol {p['sol']}\n"
+                    f"📷 {p['camera']['full_name']}\n\n💡 {fact}")
             await del_msg(q)
-            await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=p["img_src"],
-                caption=cap,parse_mode="Markdown",reply_markup=action_kb(lang,"mars","btn_another",ctx)); return
-    except Exception as e: logger.error(f"Mars: {e}")
-    await send_nasa_image(q,ctx,MARS_Q,"mars")
+            await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=p["img_src"],
+                caption=cap, parse_mode="Markdown",
+                reply_markup=action_kb(lang, "mars", "btn_another", ctx))
+            return
+    except Exception as e:
+        logger.error(f"Mars: {e}")
+    await send_nasa_image(q, ctx, MARS_Q, "mars")
+# ── End: MARS PHOTO HANDLER ───────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: MARS ROVERS GALLERY HANDLER                                             ║
+# FIX: Replaced unreliable random-sol loop with /latest_photos endpoint         ║
+# FIX: Added fallback to second rover if first has no photos                    ║
+# FIX: Added final fallback to NASA Image Search                                ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def mars_rovers_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🤖...")
+    q = update.callback_query; await safe_answer(q); lang = get_lang(ctx); await safe_edit(q, "🤖...")
     try:
-        rover=random.choice(ROVER_NAMES)
-        for sol in random.sample(list(range(50,1800)),8):
+        rover  = random.choice(ROVER_NAMES)
+        photos = []
+
+        # PRIMARY: use latest_photos endpoint — always has data, no guessing sol numbers
+        for rv in [rover] + [r for r in ROVER_NAMES if r != rover]:
             try:
-                r=requests.get(f"{NASA_BASE}/mars-photos/api/v1/rovers/{rover}/photos",
-                    params={"sol":sol,"api_key":NASA_API_KEY,"page":1},timeout=10)
-                if r.status_code!=200: continue
-                photos=r.json().get("photos",[])
-                if not photos: continue
-                p=random.choice(photos[:15]); img=p.get("img_src","")
-                if not img: continue
-                cap=(f"🤖 *{p.get('rover',{}).get('name',rover.title())}*\n"
-                     f"📅 {p.get('earth_date','')}  |  Sol {p.get('sol',sol)}\n"
-                     f"📷 {p.get('camera',{}).get('full_name','—')}")
+                r = requests.get(
+                    f"{NASA_BASE}/mars-photos/api/v1/rovers/{rv}/latest_photos",
+                    params={"api_key": NASA_API_KEY}, timeout=12
+                )
+                if r.status_code == 200:
+                    photos = r.json().get("latest_photos", [])
+                    if photos:
+                        rover = rv; break
+            except Exception as e:
+                logger.warning(f"mars_rovers latest_photos {rv}: {e}")
+                continue
+
+        if photos:
+            p   = random.choice(photos[:20])
+            img = p.get("img_src", "")
+            if img:
+                cap = (f"🤖 *{p.get('rover', {}).get('name', rover.title())}*\n"
+                       f"📅 {p.get('earth_date', '')}  |  Sol {p.get('sol', '')}\n"
+                       f"📷 {p.get('camera', {}).get('full_name', '—')}")
                 await del_msg(q)
-                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img,caption=cap,
-                    parse_mode="Markdown",reply_markup=action_kb(lang,"mars_rovers","btn_other_rv",ctx)); return
-            except: continue
-        await safe_edit(q,tx(lang,"no_img"),reply_markup=back_kb(lang,ctx=ctx))
-    except Exception as e:
-        await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
+                await ctx.bot.send_photo(
+                    chat_id=q.message.chat_id, photo=img, caption=cap,
+                    parse_mode="Markdown",
+                    reply_markup=action_kb(lang, "mars_rovers", "btn_other_rv", ctx)
+                )
+                return
 
+        # FALLBACK: NASA image search for Mars rover photos
+        logger.warning("mars_rovers_h: no latest_photos — falling back to image search")
+        await send_nasa_image(
+            q, ctx,
+            ["mars rover surface curiosity", "perseverance rover mars", "mars landscape rover"],
+            "mars_rovers"
+        )
+    except Exception as e:
+        logger.error(f"mars_rovers_h: {e}")
+        await safe_edit(q, f"{tx(lang,'err')}: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
+# ── End: MARS ROVERS GALLERY HANDLER ─────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: ASTEROIDS HANDLER                                                       ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def asteroids_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"☄️...")
+    q = update.callback_query; await safe_answer(q); lang = get_lang(ctx); await safe_edit(q, "☄️...")
     try:
-        today=date.today().isoformat()
-        data=nasa_req("/neo/rest/v1/feed",{"start_date":today,"end_date":today})
-        neos=data["near_earth_objects"].get(today,[])
+        today = date.today().isoformat()
+        data  = nasa_req("/neo/rest/v1/feed", {"start_date": today, "end_date": today})
+        neos  = data["near_earth_objects"].get(today, [])
         if not neos:
-            await safe_edit(q,tx(lang,"no_data"),reply_markup=back_kb(lang,"asteroids",ctx)); return
-        danger=sum(1 for a in neos if a["is_potentially_hazardous_asteroid"])
-        neos_s=sorted(neos,key=lambda a: float(a["close_approach_data"][0]["miss_distance"]["kilometers"]) if a["close_approach_data"] else 9e99)
-        text=f"☄️ *{today}*\n📊 {len(neos)} NEOs  |  ⚠️ {danger}\n\n"
-        for i,ast in enumerate(neos_s[:5],1):
-            name=ast["name"].replace("(","").replace(")","").strip()
-            d_min=ast["estimated_diameter"]["meters"]["estimated_diameter_min"]
-            d_max=ast["estimated_diameter"]["meters"]["estimated_diameter_max"]
-            hz=tx(lang,"hazard_yes") if ast["is_potentially_hazardous_asteroid"] else tx(lang,"hazard_no")
-            ap=ast["close_approach_data"][0] if ast["close_approach_data"] else {}
-            speed=ap.get("relative_velocity",{}).get("kilometers_per_hour","?")
-            dist_ld=ap.get("miss_distance",{}).get("lunar","?")
-            try: speed=f"{float(speed):,.0f} km/h"
+            await safe_edit(q, tx(lang, "no_data"), reply_markup=back_kb(lang, "asteroids", ctx)); return
+        danger = sum(1 for a in neos if a["is_potentially_hazardous_asteroid"])
+        neos_s = sorted(neos, key=lambda a: float(
+            a["close_approach_data"][0]["miss_distance"]["kilometers"])
+            if a["close_approach_data"] else 9e99)
+        text = f"☄️ *{today}*\n📊 {len(neos)} NEOs  |  ⚠️ {danger}\n\n"
+        for i, ast in enumerate(neos_s[:5], 1):
+            name  = ast["name"].replace("(", "").replace(")", "").strip()
+            d_min = ast["estimated_diameter"]["meters"]["estimated_diameter_min"]
+            d_max = ast["estimated_diameter"]["meters"]["estimated_diameter_max"]
+            hz    = tx(lang, "hazard_yes") if ast["is_potentially_hazardous_asteroid"] else tx(lang, "hazard_no")
+            ap    = ast["close_approach_data"][0] if ast["close_approach_data"] else {}
+            speed = ap.get("relative_velocity", {}).get("kilometers_per_hour", "?")
+            dist_ld = ap.get("miss_distance", {}).get("lunar", "?")
+            try: speed = f"{float(speed):,.0f} km/h"
             except: pass
-            try: dist_ld=f"{float(dist_ld):.2f} LD"
+            try: dist_ld = f"{float(dist_ld):.2f} LD"
             except: pass
-            text+=f"*{i}. {name}*  {hz}\n📏 {d_min:.0f}–{d_max:.0f}m  🚀 {speed}  📍 {dist_ld}\n\n"
-        text+="[🔗 NASA CNEOS](https://cneos.jpl.nasa.gov)"
-        ast_imgs=["asteroid close up nasa dawn","asteroid bennu osiris rex nasa","asteroid ryugu hayabusa",
-                  "near earth asteroid space","asteroid belt rocky nasa"]
+            text += f"*{i}. {name}*  {hz}\n📏 {d_min:.0f}–{d_max:.0f}m  🚀 {speed}  📍 {dist_ld}\n\n"
+        text += "[🔗 NASA CNEOS](https://cneos.jpl.nasa.gov)"
+        ast_imgs = ["asteroid close up nasa dawn", "asteroid bennu osiris rex nasa",
+                    "asteroid ryugu hayabusa", "near earth asteroid space"]
         try:
-            ri=requests.get("https://images-api.nasa.gov/search",
-                params={"q":random.choice(ast_imgs),"media_type":"image","page_size":20},timeout=10)
-            items=[it for it in ri.json().get("collection",{}).get("items",[]) if it.get("links")]
+            ri = requests.get("https://images-api.nasa.gov/search",
+                params={"q": random.choice(ast_imgs), "media_type": "image", "page_size": 20}, timeout=10)
+            items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
             if items:
-                img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+                img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
                 if img_url:
                     await del_msg(q)
-                    await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
-                        caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"asteroids",ctx))
+                    await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
+                        caption=text[:1024], parse_mode="Markdown",
+                        reply_markup=back_kb(lang, "asteroids", ctx))
                     return
         except: pass
-        await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"asteroids",ctx))
+        await safe_edit(q, text[:4096], reply_markup=back_kb(lang, "asteroids", ctx))
     except Exception as e:
-        await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q, f"{tx(lang,'err')}: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
+# ── End: ASTEROIDS HANDLER ────────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: ISS HANDLER                                                             ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def iss_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🛸...")
+    q = update.callback_query; await safe_answer(q); lang = get_lang(ctx); await safe_edit(q, "🛸...")
     try:
-        pos=get_iss_position()
-        lat,lon,ts=pos["lat"],pos["lon"],pos["ts"]
-        iss_crew=get_iss_crew()
-        crew_str="\n".join(f"   👨‍🚀 {n}" for n in iss_crew) or f"   {tx(lang,'iss_no_crew')}"
-        text=(f"🛸 *ISS — {ts}*\n\n🌍 `{lat:.4f}°` | 🌏 `{lon:.4f}°`\n"
-              f"⚡ ~27,600 km/h  |  🏔 ~408 km\n\n👨‍🚀 Crew ({len(iss_crew)}):\n{crew_str}\n\n"
-              f"[{tx(lang,'iss_map')}](https://www.google.com/maps?q={lat},{lon})")
-        iss_images=["ISS international space station orbit","ISS from earth telescope","space station earth view"]
+        pos  = get_iss_position()
+        lat, lon, ts = pos["lat"], pos["lon"], pos["ts"]
+        iss_crew = get_iss_crew()
+        crew_str = "\n".join(f"   👨‍🚀 {n}" for n in iss_crew) or f"   {tx(lang,'iss_no_crew')}"
+        text = (f"🛸 *ISS — {ts}*\n\n🌍 `{lat:.4f}°` | 🌏 `{lon:.4f}°`\n"
+                f"⚡ ~27,600 km/h  |  🏔 ~408 km\n\n👨‍🚀 Crew ({len(iss_crew)}):\n{crew_str}\n\n"
+                f"[{tx(lang,'iss_map')}](https://www.google.com/maps?q={lat},{lon})")
+        iss_images = ["ISS international space station orbit", "ISS from earth telescope",
+                      "space station earth view"]
         try:
-            r=requests.get("https://images-api.nasa.gov/search",
-                params={"q":random.choice(iss_images),"media_type":"image","page_size":20},timeout=12)
-            items=[it for it in r.json().get("collection",{}).get("items",[]) if it.get("links")]
+            r = requests.get("https://images-api.nasa.gov/search",
+                params={"q": random.choice(iss_images), "media_type": "image", "page_size": 20},
+                timeout=12)
+            items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
             if items:
-                img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+                img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
                 if img_url:
                     await del_msg(q)
-                    await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
-                        caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"iss",ctx))
+                    await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
+                        caption=text[:1024], parse_mode="Markdown",
+                        reply_markup=back_kb(lang, "iss", ctx))
                     return
         except: pass
-        await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"iss",ctx))
+        await safe_edit(q, text[:4096], reply_markup=back_kb(lang, "iss", ctx))
     except Exception as e:
-        await safe_edit(q,f"{tx(lang,'err')} ISS: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q, f"{tx(lang,'err')} ISS: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
+# ── End: ISS HANDLER ──────────────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: EXOPLANETS HANDLER                                                      ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def exoplanets_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
-    sel=random.sample(KNOWN_EXOPLANETS,min(4,len(KNOWN_EXOPLANETS)))
-    text="🔭 *Exoplanets*\n\n"
+    q = update.callback_query; await safe_answer(q); lang = get_lang(ctx)
+    sel  = random.sample(KNOWN_EXOPLANETS, min(4, len(KNOWN_EXOPLANETS)))
+    text = "🔭 *Exoplanets*\n\n"
     for p in sel:
-        note=p["note"].get(lang,p["note"]["en"])
-        text+=(f"🪐 *{p['name']}* — {p['star']}\n"
-               f"   📅 {p['year']}  |  📏 {p['radius']}R🌍  |  🔄 {p['period']}d  |  📡 {p['dist_ly']}ly\n"
-               f"   💡 _{note}_\n\n")
-    text+="[🔗 NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu)"
-    exo_imgs=["exoplanet artist concept nasa","TRAPPIST-1 system nasa","Kepler exoplanet nasa",
-              "habitable zone planet artist","James Webb exoplanet atmosphere"]
+        note = p["note"].get(lang, p["note"]["en"])
+        text += (f"🪐 *{p['name']}* — {p['star']}\n"
+                 f"   📅 {p['year']}  |  📏 {p['radius']}R🌍  |  🔄 {p['period']}d  |  📡 {p['dist_ly']}ly\n"
+                 f"   💡 _{note}_\n\n")
+    text += "[🔗 NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu)"
+    exo_imgs = ["exoplanet artist concept nasa", "TRAPPIST-1 system nasa",
+                "Kepler exoplanet nasa", "habitable zone planet artist",
+                "James Webb exoplanet atmosphere"]
     try:
-        r=requests.get("https://images-api.nasa.gov/search",
-            params={"q":random.choice(exo_imgs),"media_type":"image","page_size":20},timeout=12)
-        items=[it for it in r.json().get("collection",{}).get("items",[]) if it.get("links")]
+        r = requests.get("https://images-api.nasa.gov/search",
+            params={"q": random.choice(exo_imgs), "media_type": "image", "page_size": 20}, timeout=12)
+        items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
             if img_url:
                 await del_msg(q)
-                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
-                    caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"exoplanets",ctx))
+                await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
+                    caption=text[:1024], parse_mode="Markdown",
+                    reply_markup=back_kb(lang, "exoplanets", ctx))
                 return
     except: pass
-    await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"exoplanets",ctx))
+    await safe_edit(q, text[:4096], reply_markup=back_kb(lang, "exoplanets", ctx))
+# ── End: EXOPLANETS HANDLER ───────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: SPACE WEATHER HANDLER                                                   ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def spaceweather_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🌞...")
+    q = update.callback_query; await safe_answer(q); lang = get_lang(ctx); await safe_edit(q, "🌞...")
     try:
         kp_val, kp_time, kp_state = "?", "?", "?"
         try:
-            r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=10); r.raise_for_status()
-            kp_data=r.json(); cur=kp_data[-1] if kp_data else {}
-            kp_val=cur.get("kp_index",cur.get("Kp","?")); kp_time=cur.get("time_tag","")[:16].replace("T"," ")
+            r = requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json", timeout=10)
+            r.raise_for_status()
+            kp_data = r.json(); cur = kp_data[-1] if kp_data else {}
+            kp_val  = cur.get("kp_index", cur.get("Kp", "?"))
+            kp_time = cur.get("time_tag", "")[:16].replace("T", " ")
             try:
-                kv=float(kp_val)
-                kp_state=("🟢 Calm" if kv<4 else "🟡 Minor" if kv<5 else "🟠 Moderate" if kv<6 else "🔴 Strong" if kv<8 else "🚨 Extreme")
-            except: kp_state="?"
+                kv = float(kp_val)
+                kp_state = ("🟢 Calm" if kv<4 else "🟡 Minor" if kv<5 else "🟠 Moderate" if kv<6
+                             else "🔴 Strong" if kv<8 else "🚨 Extreme")
+            except: kp_state = "?"
         except: pass
         sw_speed, sw_density = "?", "?"
         try:
-            r2=requests.get("https://services.swpc.noaa.gov/products/solar-wind/plasma-5-minute.json",timeout=10); r2.raise_for_status()
-            sw_data=r2.json(); sw_lat=sw_data[-1] if sw_data else []
-            if len(sw_lat)>2:
-                try: sw_speed=f"{float(sw_lat[2]):,.0f} km/s"
-                except: sw_speed=str(sw_lat[2])
-                try: sw_density=f"{float(sw_lat[1]):.2f} p/cm3"
-                except: sw_density=str(sw_lat[1])
+            r2 = requests.get("https://services.swpc.noaa.gov/products/solar-wind/plasma-5-minute.json", timeout=10)
+            r2.raise_for_status()
+            sw_data = r2.json(); sw_lat = sw_data[-1] if sw_data else []
+            if len(sw_lat) > 2:
+                try: sw_speed   = f"{float(sw_lat[2]):,.0f} km/s"
+                except: sw_speed   = str(sw_lat[2])
+                try: sw_density = f"{float(sw_lat[1]):.2f} p/cm3"
+                except: sw_density = str(sw_lat[1])
         except: pass
         flare_cls, flare_flux = "?", "?"
         try:
-            r3=requests.get("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",timeout=10); r3.raise_for_status()
-            xray=r3.json(); xl=xray[-1] if xray else {}
-            flux=xl.get("flux","?")
+            r3 = requests.get("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json", timeout=10)
+            r3.raise_for_status()
+            xray = r3.json(); xl = xray[-1] if xray else {}; flux = xl.get("flux", "?")
             try:
-                fv=float(flux)
-                flare_cls=("X-class" if fv>=1e-4 else "M-class" if fv>=1e-5 else "C-class" if fv>=1e-6 else "B-class" if fv>=1e-7 else "A-class")
-                flare_flux=f"{fv:.2e} W/m2"
-            except: flare_cls="?"; flare_flux=str(flux)
+                fv = float(flux)
+                flare_cls  = ("X-class" if fv>=1e-4 else "M-class" if fv>=1e-5
+                               else "C-class" if fv>=1e-6 else "B-class" if fv>=1e-7 else "A-class")
+                flare_flux = f"{fv:.2e} W/m2"
+            except: flare_cls = "?"; flare_flux = str(flux)
         except: pass
         ssn = "?"
         try:
-            r4=requests.get("https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json",timeout=10); r4.raise_for_status()
-            sc=r4.json(); ssn=sc[-1].get("smoothed_ssn",sc[-1].get("ssn","?")) if sc else "?"
+            r4 = requests.get("https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json", timeout=10)
+            r4.raise_for_status(); sc = r4.json()
+            ssn = sc[-1].get("smoothed_ssn", sc[-1].get("ssn", "?")) if sc else "?"
         except: pass
-        try: aurora_vis=("Equatorial" if float(str(kp_val))>=8 else "Mid-latitudes" if float(str(kp_val))>=6 else "Scandinavia/Canada" if float(str(kp_val))>=4 else "Polar only")
-        except: aurora_vis="Polar only"
-        text=(f"*Space Weather — Live*\n"
-              f"*Kp-index:* {kp_val} {kp_state}\n"
-              f"*Solar Wind:* {sw_speed} | {sw_density}\n"
-              f"*Flare class:* {flare_cls} ({flare_flux})\n"
-              f"*Sunspot #:* {ssn}\n\n"
-              f"Aurora: {aurora_vis}\n\n"
-              f"[NOAA SWPC](https://www.swpc.noaa.gov)")
         try:
-            sun_url="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_0193.jpg"
+            aurora_vis = ("Equatorial" if float(str(kp_val))>=8 else "Mid-latitudes" if float(str(kp_val))>=6
+                          else "Scandinavia/Canada" if float(str(kp_val))>=4 else "Polar only")
+        except: aurora_vis = "Polar only"
+        text = (f"*Space Weather — Live*\n"
+                f"*Kp-index:* {kp_val} {kp_state}\n"
+                f"*Solar Wind:* {sw_speed} | {sw_density}\n"
+                f"*Flare class:* {flare_cls} ({flare_flux})\n"
+                f"*Sunspot #:* {ssn}\n\n"
+                f"Aurora: {aurora_vis}\n\n"
+                f"[NOAA SWPC](https://www.swpc.noaa.gov)")
+        try:
+            sun_url = "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_0193.jpg"
             await del_msg(q)
             await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=sun_url,
                 caption=text[:1024], parse_mode="Markdown",
-                reply_markup=back_kb(lang,"spaceweather",ctx))
+                reply_markup=back_kb(lang, "spaceweather", ctx))
             return
         except: pass
-        await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"spaceweather",ctx))
+        await safe_edit(q, text[:4096], reply_markup=back_kb(lang, "spaceweather", ctx))
     except Exception as e:
-        await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q, f"{tx(lang,'err')}: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
+# ── End: SPACE WEATHER HANDLER ────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: LAUNCHES HANDLER                                                        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def launches_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🚀...")
+    q = update.callback_query; await safe_answer(q); lang = get_lang(ctx); await safe_edit(q, "🚀...")
     try:
-        launches=cache_get("launches")
+        launches = cache_get("launches")
         if not launches:
-            data=get_json("https://ll.thespacedevs.com/2.2.0/launch/upcoming/?limit=7&ordering=net&mode=list",timeout=15)
-            launches=data.get("results",[])
-            if launches: cache_set("launches",launches)
+            data = get_json("https://ll.thespacedevs.com/2.2.0/launch/upcoming/?limit=7&ordering=net&mode=list", timeout=15)
+            launches = data.get("results", [])
+            if launches: cache_set("launches", launches)
         if not launches:
-            await safe_edit(q,tx(lang,"no_data"),reply_markup=back_kb(lang,ctx=ctx)); return
-        text="🚀 *Upcoming Launches*\n\n"
-        for i,lc in enumerate(launches[:6],1):
-            if not isinstance(lc,dict): continue
+            await safe_edit(q, tx(lang, "no_data"), reply_markup=back_kb(lang, ctx=ctx)); return
+        text = "🚀 *Upcoming Launches*\n\n"
+        for i, lc in enumerate(launches[:6], 1):
+            if not isinstance(lc, dict): continue
             try:
-                name=str(lc.get("name","?")); rocket=str((lc.get("rocket") or {}).get("configuration",{}).get("name","?"))
-                prov=str((lc.get("launch_service_provider") or {}).get("name","?")); net=str(lc.get("net","?"))
-                stat_a=str((lc.get("status") or {}).get("abbrev","?"))
-                emoji={"Go":"✅","TBD":"❓","TBC":"🔸","Success":"🎉","Failure":"❌"}.get(stat_a,"🕐")
+                name   = str(lc.get("name", "?"))
+                rocket = str((lc.get("rocket") or {}).get("configuration", {}).get("name", "?"))
+                prov   = str((lc.get("launch_service_provider") or {}).get("name", "?"))
+                net    = str(lc.get("net", "?"))
+                stat_a = str((lc.get("status") or {}).get("abbrev", "?"))
+                emoji  = {"Go":"✅","TBD":"❓","TBC":"🔸","Success":"🎉","Failure":"❌"}.get(stat_a, "🕐")
                 try:
-                    dt=datetime.fromisoformat(net.replace("Z","+00:00")); net=dt.strftime("%d.%m.%Y %H:%M UTC")
+                    dt  = datetime.fromisoformat(net.replace("Z", "+00:00"))
+                    net = dt.strftime("%d.%m.%Y %H:%M UTC")
                 except: pass
-                text+=f"*{i}. {name}*\n   🚀 {rocket}  |  {prov}\n   ⏰ {net}  {emoji}\n\n"
+                text += f"*{i}. {name}*\n   🚀 {rocket}  |  {prov}\n   ⏰ {net}  {emoji}\n\n"
             except: continue
-        launch_imgs=["rocket launch nasa","SpaceX falcon launch pad","rocket liftoff pad exhaust",
-                     "space launch vehicle liftoff","Atlas rocket launch","falcon 9 launch"]
+        launch_imgs = ["rocket launch nasa", "SpaceX falcon launch pad", "rocket liftoff pad exhaust",
+                       "space launch vehicle liftoff", "falcon 9 launch"]
         try:
-            ri=requests.get("https://images-api.nasa.gov/search",
-                params={"q":random.choice(launch_imgs),"media_type":"image","page_size":20},timeout=10)
-            items=[it for it in ri.json().get("collection",{}).get("items",[]) if it.get("links")]
+            ri = requests.get("https://images-api.nasa.gov/search",
+                params={"q": random.choice(launch_imgs), "media_type": "image", "page_size": 20}, timeout=10)
+            items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
             if items:
-                img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+                img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
                 if img_url:
                     await del_msg(q)
-                    await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
-                        caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"launches",ctx))
+                    await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
+                        caption=text[:1024], parse_mode="Markdown",
+                        reply_markup=back_kb(lang, "launches", ctx))
                     return
         except: pass
-        await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"launches",ctx))
+        await safe_edit(q, text[:4096], reply_markup=back_kb(lang, "launches", ctx))
     except Exception as e:
-        await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q, f"{tx(lang,'err')}: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
+# ── End: LAUNCHES HANDLER ─────────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: SATELLITES HANDLER                                                      ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def satellites_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"📡...")
-    cached=cache_get("starlink")
+    q = update.callback_query; await safe_answer(q); lang = get_lang(ctx); await safe_edit(q, "📡...")
+    cached = cache_get("starlink")
     if cached:
-        total,active=cached
+        total, active = cached
     else:
         try:
-            sl=get_json("https://api.spacexdata.com/v4/starlink",timeout=12)
-            total=len(sl); active=sum(1 for s in sl if isinstance(s,dict) and not (s.get("spaceTrack") or {}).get("DECAY_DATE"))
-            cache_set("starlink",(total,active))
-        except: total=active="?"
-    text=(f"📡 *Satellites in Orbit*\n\n"
-          f"🌍 Total tracked: ~9,000+\n"
-          f"🛸 *Starlink:* {total} total, {active} active\n"
-          f"🔭 *Other constellations:* OneWeb, GPS, Galileo, GLONASS\n\n"
-          f"[🔗 n2yo.com — live tracking](https://www.n2yo.com)")
-    sat_imgs=["satellite orbit earth nasa","starlink constellation night sky","GPS satellite earth orbit",
-              "communication satellite deployment space","satellite solar panels orbit"]
+            sl     = get_json("https://api.spacexdata.com/v4/starlink", timeout=12)
+            total  = len(sl)
+            active = sum(1 for s in sl if isinstance(s, dict) and
+                         not (s.get("spaceTrack") or {}).get("DECAY_DATE"))
+            cache_set("starlink", (total, active))
+        except: total = active = "?"
+    text = (f"📡 *Satellites in Orbit*\n\n"
+            f"🌍 Total tracked: ~9,000+\n"
+            f"🛸 *Starlink:* {total} total, {active} active\n"
+            f"🔭 *Other constellations:* OneWeb, GPS, Galileo, GLONASS\n\n"
+            f"[🔗 n2yo.com — live tracking](https://www.n2yo.com)")
+    sat_imgs = ["satellite orbit earth nasa", "starlink constellation night sky",
+                "GPS satellite earth orbit", "communication satellite deployment space"]
     try:
-        ri=requests.get("https://images-api.nasa.gov/search",
-            params={"q":random.choice(sat_imgs),"media_type":"image","page_size":20},timeout=10)
-        items=[it for it in ri.json().get("collection",{}).get("items",[]) if it.get("links")]
+        ri = requests.get("https://images-api.nasa.gov/search",
+            params={"q": random.choice(sat_imgs), "media_type": "image", "page_size": 20}, timeout=10)
+        items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
             if img_url:
                 await del_msg(q)
-                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
-                    caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"satellites",ctx))
+                await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
+                    caption=text[:1024], parse_mode="Markdown",
+                    reply_markup=back_kb(lang, "satellites", ctx))
                 return
     except: pass
-    await safe_edit(q,text,reply_markup=back_kb(lang,"satellites",ctx))
+    await safe_edit(q, text, reply_markup=back_kb(lang, "satellites", ctx))
+# ── End: SATELLITES HANDLER ───────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: METEORS HANDLER                                                         ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def meteors_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
-    text="🌠 *Meteor Showers*\n\n"
+    q = update.callback_query; await safe_answer(q); lang = get_lang(ctx)
+    text = "🌠 *Meteor Showers*\n\n"
     for m in METEOR_SHOWERS:
-        name=m["name"].get(lang,m["name"]["en"])
-        text+=f"✨ *{name}* — {m['peak']}\n   ⚡ {m['speed']}  |  🌠 {m['rate']}  |  {m['parent']}\n\n"
-    text+="[🔗 AMS Meteor Calendar](https://www.amsmeteors.org/meteor-showers/meteor-shower-calendar/)"
-    meteor_imgs=["meteor shower long exposure night sky","perseid meteor shower","shooting star night sky nasa",
-                 "leonids meteor shower","geminids fireball"]
+        name = m["name"].get(lang, m["name"]["en"])
+        text += f"✨ *{name}* — {m['peak']}\n   ⚡ {m['speed']}  |  🌠 {m['rate']}  |  {m['parent']}\n\n"
+    text += "[🔗 AMS Meteor Calendar](https://www.amsmeteors.org/meteor-showers/meteor-shower-calendar/)"
+    meteor_imgs = ["meteor shower long exposure night sky", "perseid meteor shower",
+                   "shooting star night sky nasa", "leonids meteor shower", "geminids fireball"]
     try:
-        r=requests.get("https://images-api.nasa.gov/search",
-            params={"q":random.choice(meteor_imgs),"media_type":"image","page_size":20},timeout=12)
-        items=[it for it in r.json().get("collection",{}).get("items",[]) if it.get("links")]
+        r = requests.get("https://images-api.nasa.gov/search",
+            params={"q": random.choice(meteor_imgs), "media_type": "image", "page_size": 20}, timeout=12)
+        items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
             if img_url:
                 await del_msg(q)
-                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
-                    caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,ctx=ctx))
+                await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
+                    caption=text[:1024], parse_mode="Markdown",
+                    reply_markup=back_kb(lang, ctx=ctx))
                 return
     except: pass
-    await safe_edit(q,text,reply_markup=back_kb(lang,ctx=ctx))
+    await safe_edit(q, text, reply_markup=back_kb(lang, ctx=ctx))
+# ── End: METEORS HANDLER ──────────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: PLANETS HANDLER                                                         ║
+# FIX: Added text fallback when NASA Image API fails                            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def planets_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
-    p=random.choice(PLANETS); fact=p["fact"].get(lang,p["fact"]["en"])
-    text=(f"*{p['name']}*\n\n📏 {p['radius']}  |  📡 {p['dist']}\n"
-          f"🔄 {p['period']}  |  🌅 {p['day']}\n🌡 {p['temp']}  |  🌙 {p['moons']}\n\n💡 {fact}")
+    q    = update.callback_query; await safe_answer(q); lang = get_lang(ctx)
+    p    = random.choice(PLANETS)
+    fact = p["fact"].get(lang, p["fact"]["en"])
+    text = (f"*{p['name']}*\n\n📏 {p['radius']}  |  📡 {p['dist']}\n"
+            f"🔄 {p['period']}  |  🌅 {p['day']}\n🌡 {p['temp']}  |  🌙 {p['moons']}\n\n💡 {fact}")
     planet_queries = {
-        "☿ Mercury": ["mercury planet nasa","mercury messenger spacecraft"],
-        "♀ Venus": ["venus planet nasa","venus surface mariner"],
-        "🌍 Earth": ["earth from space nasa","earth blue marble"],
-        "♂ Mars": ["mars planet nasa","mars surface red"],
-        "♃ Jupiter": ["jupiter great red spot nasa","jupiter cassini"],
-        "♄ Saturn": ["saturn rings cassini nasa","saturn planet"],
-        "⛢ Uranus": ["uranus planet voyager nasa","uranus rings"],
-        "♆ Neptune": ["neptune planet voyager nasa","neptune blue planet"],
+        "☿ Mercury": ["mercury planet nasa messenger spacecraft"],
+        "♀ Venus":   ["venus planet nasa surface mariner"],
+        "🌍 Earth":  ["earth from space nasa blue marble"],
+        "♂ Mars":    ["mars planet nasa surface red"],
+        "♃ Jupiter": ["jupiter great red spot nasa cassini"],
+        "♄ Saturn":  ["saturn rings cassini nasa planet"],
+        "⛢ Uranus":  ["uranus planet voyager nasa rings"],
+        "♆ Neptune": ["neptune planet voyager nasa blue"],
     }
-    queries = planet_queries.get(p["name"], ["planet nasa"])
+    queries = planet_queries.get(p["name"], ["solar system planet nasa"])
     try:
-        r=requests.get("https://images-api.nasa.gov/search",
-            params={"q":random.choice(queries),"media_type":"image","page_size":20},timeout=12)
-        items=[it for it in r.json().get("collection",{}).get("items",[]) if it.get("links")]
+        r = requests.get("https://images-api.nasa.gov/search",
+            params={"q": random.choice(queries), "media_type": "image", "page_size": 20}, timeout=12)
+        items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
             if img_url:
                 await del_msg(q)
-                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
-                    caption=text[:1024],parse_mode="Markdown",reply_markup=action_kb(lang,"planets","btn_another",ctx))
+                await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
+                    caption=text[:1024], parse_mode="Markdown",
+                    reply_markup=action_kb(lang, "planets", "btn_another", ctx))
                 return
-    except: pass
-    await safe_edit(q,text,reply_markup=action_kb(lang,"planets","btn_another",ctx))
+    except Exception as e:
+        logger.warning(f"planets_h image: {e}")
+    # FIX: Always show text even when image fails
+    await safe_edit(q, text, reply_markup=action_kb(lang, "planets", "btn_another", ctx))
+# ── End: PLANETS HANDLER ──────────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: MOON HANDLER                                                            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def moon_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    q = update.callback_query; await safe_answer(q); lang = get_lang(ctx)
     emoji, idx, cycle_day, illum = get_moon_phase(date.today())
-    phases=tx(lang,"moon_phases")
-    phase_name=phases[idx] if isinstance(phases,list) else "?"
-    text=(f"{emoji} *Moon Phase — {date.today()}*\n\n🌙 *{phase_name}*\n"
-          f"💡 ~{illum}%  |  Day {cycle_day:.1f}/29.5\n\n"
-          f"📸 Photo tip: ISO 100, f/11, 1/250s")
-    moon_images = ["moon surface nasa apollo","lunar crater full moon","moon high resolution nasa",
-                   "moon from space ISS","lunar surface close up"]
+    phases     = tx(lang, "moon_phases")
+    phase_name = phases[idx] if isinstance(phases, list) else "?"
+    text = (f"{emoji} *Moon Phase — {date.today()}*\n\n🌙 *{phase_name}*\n"
+            f"💡 ~{illum}%  |  Day {cycle_day:.1f}/29.5\n\n"
+            f"📸 Photo tip: ISO 100, f/11, 1/250s")
+    moon_images = ["moon surface nasa apollo", "lunar crater full moon",
+                   "moon high resolution nasa", "moon from space ISS", "lunar surface close up"]
     try:
-        r=requests.get("https://images-api.nasa.gov/search",
-            params={"q":random.choice(moon_images),"media_type":"image","page_size":20},timeout=12)
-        items=[it for it in r.json().get("collection",{}).get("items",[]) if it.get("links")]
+        r = requests.get("https://images-api.nasa.gov/search",
+            params={"q": random.choice(moon_images), "media_type": "image", "page_size": 20}, timeout=12)
+        items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
             if img_url:
                 await del_msg(q)
-                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
-                    caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"moon",ctx))
+                await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
+                    caption=text[:1024], parse_mode="Markdown",
+                    reply_markup=back_kb(lang, "moon", ctx))
                 return
     except: pass
-    await safe_edit(q,text,reply_markup=back_kb(lang,"moon",ctx))
+    await safe_edit(q, text, reply_markup=back_kb(lang, "moon", ctx))
+# ── End: MOON HANDLER ─────────────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: TELESCOPES HANDLER                                                      ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def telescopes_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
-    text=("🔬 *Space Telescopes*\n\n"
-          "🌌 *JWST* — mirror 6.5m, orbit L2, infrared\n"
-          "🔭 *Hubble* — mirror 2.4m, optical/UV, 600km orbit\n"
-          "📡 *Chandra* — X-ray, high elliptical orbit\n"
-          "🌊 *XMM-Newton* — X-ray, ESA\n"
-          "🔭 *Spitzer* — infrared (retired 2020)\n"
-          "📡 *VLT* — 4×8.2m, Atacama\n"
-          "🌐 *FAST* — 500m radio dish, China\n"
-          "🔭 *ELT (~2028)* — 39m mirror, ESA\n"
-          "🌌 *Roman (~2027)* — wide-field infrared, NASA")
-    tel_imgs=["James Webb Space Telescope NASA","Hubble Space Telescope orbit","Chandra X-ray telescope",
-              "very large telescope ESO","telescope mirror primary hexagonal","space observatory nasa"]
+    q = update.callback_query; await safe_answer(q); lang = get_lang(ctx)
+    text = ("🔬 *Space Telescopes*\n\n"
+            "🌌 *JWST* — mirror 6.5m, orbit L2, infrared\n"
+            "🔭 *Hubble* — mirror 2.4m, optical/UV, 600km orbit\n"
+            "📡 *Chandra* — X-ray, high elliptical orbit\n"
+            "🌊 *XMM-Newton* — X-ray, ESA\n"
+            "🔭 *Spitzer* — infrared (retired 2020)\n"
+            "📡 *VLT* — 4×8.2m, Atacama\n"
+            "🌐 *FAST* — 500m radio dish, China\n"
+            "🔭 *ELT (~2028)* — 39m mirror, ESA\n"
+            "🌌 *Roman (~2027)* — wide-field infrared, NASA")
+    tel_imgs = ["James Webb Space Telescope NASA", "Hubble Space Telescope orbit",
+                "Chandra X-ray telescope", "very large telescope ESO",
+                "telescope mirror primary hexagonal", "space observatory nasa"]
     try:
-        ri=requests.get("https://images-api.nasa.gov/search",
-            params={"q":random.choice(tel_imgs),"media_type":"image","page_size":20},timeout=10)
-        items=[it for it in ri.json().get("collection",{}).get("items",[]) if it.get("links")]
+        ri = requests.get("https://images-api.nasa.gov/search",
+            params={"q": random.choice(tel_imgs), "media_type": "image", "page_size": 20}, timeout=10)
+        items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
             if img_url:
                 await del_msg(q)
-                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
-                    caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,ctx=ctx))
+                await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
+                    caption=text[:1024], parse_mode="Markdown",
+                    reply_markup=back_kb(lang, ctx=ctx))
                 return
     except: pass
-    await safe_edit(q,text,reply_markup=back_kb(lang,ctx=ctx))
+    await safe_edit(q, text, reply_markup=back_kb(lang, ctx=ctx))
+# ── End: TELESCOPES HANDLER ───────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: SPACE FACT & CHANNELS HANDLERS                                          ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def spacefact_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
-    fact=random.choice(SPACE_FACTS.get(lang,SPACE_FACTS["en"]))
-    text=f"⭐ *Space Fact*\n\n{fact}"
-    fact_imgs=["space stars galaxy nasa","universe deep field","cosmos stars milky way","nebula colorful nasa hubble",
-               "star formation space","galaxy spiral nasa","cosmos exploration nasa"]
+    q    = update.callback_query; await safe_answer(q); lang = get_lang(ctx)
+    fact = random.choice(SPACE_FACTS.get(lang, SPACE_FACTS["en"]))
+    text = f"⭐ *Space Fact*\n\n{fact}"
+    fact_imgs = ["space stars galaxy nasa", "universe deep field", "cosmos stars milky way",
+                 "nebula colorful nasa hubble", "star formation space", "galaxy spiral nasa"]
     try:
-        ri=requests.get("https://images-api.nasa.gov/search",
-            params={"q":random.choice(fact_imgs),"media_type":"image","page_size":20},timeout=10)
-        items=[it for it in ri.json().get("collection",{}).get("items",[]) if it.get("links")]
+        ri = requests.get("https://images-api.nasa.gov/search",
+            params={"q": random.choice(fact_imgs), "media_type": "image", "page_size": 20}, timeout=10)
+        items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url=(random.choice(items[:15]).get("links",[{}])[0]).get("href","")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
             if img_url:
                 await del_msg(q)
-                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
-                    caption=text[:1024],parse_mode="Markdown",reply_markup=back_kb(lang,"spacefact",ctx))
+                await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
+                    caption=text[:1024], parse_mode="Markdown",
+                    reply_markup=back_kb(lang, "spacefact", ctx))
                 return
     except: pass
-    await safe_edit(q,text,reply_markup=back_kb(lang,"spacefact",ctx))
+    await safe_edit(q, text, reply_markup=back_kb(lang, "spacefact", ctx))
 
 async def channels_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
-    await safe_edit(q,CHANNELS_TEXT.get(lang,CHANNELS_TEXT["ru"]),reply_markup=back_kb(lang,ctx=ctx))
+    q = update.callback_query; await safe_answer(q); lang = get_lang(ctx)
+    await safe_edit(q, CHANNELS_TEXT.get(lang, CHANNELS_TEXT["ru"]),
+                    reply_markup=back_kb(lang, ctx=ctx))
+# ── End: SPACE FACT & CHANNELS HANDLERS ──────────────────────────────────────
 
-# ── LIVE HANDLERS ─────────────────────────────────────────────────────────────
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: LIVE HANDLERS (solar wind, Kp, flares, ISS live, radiation, aurora,   ║
+#        geomagnetic, sunspot, EPIC, satellite count)                           ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def live_solar_wind_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
     try:
@@ -1647,8 +2071,12 @@ async def live_sat_count_h(update, ctx):
     except: total=active="?"
     await safe_edit(q,f"🔴 *Starlink*\n\nTotal: *{total}*  |  Active: *{active}*\n\nAll satellites: ~9,000+ in orbit.",
         reply_markup=back_kb(lang,"live_satellite_count",ctx))
+# ── End: LIVE HANDLERS ────────────────────────────────────────────────────────
 
-# ── INTERACTIVE HANDLERS ──────────────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: NOTIFICATIONS HANDLERS (menu + toggle)                                 ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def notifications_menu_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     subs=load_subscribers(); chat_id=q.message.chat_id
@@ -1667,8 +2095,12 @@ async def notif_toggle_h(update, ctx):
     try: await q.answer(msg,show_alert=False)
     except: pass
     await safe_edit(q,tx(lang,"notif_title"),reply_markup=notifications_kb(lang,subs,chat_id))
+# ── End: NOTIFICATIONS HANDLERS ──────────────────────────────────────────────
 
-# ── ConversationHandler: Planet Calculator ────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: CONVERSATION HANDLER — Planet Calculator                               ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def planet_calc_start(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     ctx.user_data["planet_calc_lang"]=lang
@@ -1716,8 +2148,12 @@ async def planet_weight_received(update, ctx):
 async def planet_calc_cancel(update, ctx):
     lang=ctx.user_data.get("planet_calc_lang","ru")
     await update.message.reply_text(tx(lang,"capsule_cancel")); return ConversationHandler.END
+# ── End: CONVERSATION HANDLER — Planet Calculator ─────────────────────────────
 
-# ── ConversationHandler: Horoscope ────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: CONVERSATION HANDLER — Horoscope                                       ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def horoscope_menu_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     ctx.user_data["horoscope_lang"]=lang
@@ -1749,8 +2185,12 @@ async def horoscope_cancel(update, ctx):
     lang=ctx.user_data.get("horoscope_lang","ru")
     await update.message.reply_text(tx(lang,"capsule_cancel"))
     return ConversationHandler.END
+# ── End: CONVERSATION HANDLER — Horoscope ─────────────────────────────────────
 
-# ── ConversationHandler: Time Capsule ────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: CONVERSATION HANDLER — Time Capsule                                    ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def capsule_menu_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     ctx.user_data["capsule_lang"]=lang
@@ -1775,8 +2215,12 @@ async def capsule_cancel(update, ctx):
     lang=ctx.user_data.get("capsule_lang","ru")
     await update.message.reply_text(tx(lang,"capsule_cancel"))
     return ConversationHandler.END
+# ── End: CONVERSATION HANDLER — Time Capsule ──────────────────────────────────
 
-# ── Quiz ──────────────────────────────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: QUIZ HANDLERS                                                           ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def quiz_start_menu_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     ctx.user_data["quiz_score"]=0; ctx.user_data["quiz_q"]=0; ctx.user_data["quiz_answered"]=False
@@ -1818,7 +2262,13 @@ async def quiz_finish_h(update, ctx):
     g=grade.get(lang,grade["en"])
     kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"btn_more_rnd"),callback_data="quiz_start_menu"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
     await safe_edit(q,tx(lang,"quiz_result",score=score,grade=g),reply_markup=kb)
+# ── End: QUIZ HANDLERS ────────────────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: INTERACTIVE HANDLERS (space name, daily poll, mars rover live,         ║
+#        lunar calendar, NASA TV)                                                ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def space_name_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     user=q.from_user; name=(user.first_name or "Explorer").upper()
@@ -1868,7 +2318,7 @@ async def lunar_calendar_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     today=date.today()
     text=tx(lang,"lunar_cal_title")+f"📅 *{today.strftime('%B %Y')}*\n\n"
-    _mp=tx(lang,"moon_phases")  # list of 8 phase names
+    _mp=tx(lang,"moon_phases")
     phase_names={0:f"🌑 {_mp[0]}",2:f"🌓 {_mp[2]}",4:f"🌕 {_mp[4]}",6:f"🌗 {_mp[6]}"}
     seen=set()
     for i in range(30):
@@ -1881,12 +2331,15 @@ async def lunar_calendar_h(update, ctx):
 async def nasa_tv_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     await safe_edit(q,tx(lang,"nasa_tv_title"),reply_markup=back_kb(lang,ctx=ctx))
+# ── End: INTERACTIVE HANDLERS ─────────────────────────────────────────────────
 
-# ── NEWS HANDLERS ─────────────────────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: NEWS HANDLERS                                                           ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def _show_news_article(q, ctx, lang, source_key, idx):
-    """Display one news article with photo (or text fallback). Anti-repeat via user_data."""
+    """Display one news article with photo (or text fallback)."""
     src = NEWS_SOURCES.get(source_key, {})
-    # Load from cache or fetch fresh
     articles = rss_cache_get(source_key)
     if not articles:
         articles = fetch_rss(source_key, max_items=30)
@@ -1897,10 +2350,9 @@ async def _show_news_article(q, ctx, lang, source_key, idx):
         return
 
     total = len(articles)
-    idx   = idx % total  # wrap around
+    idx   = idx % total
     art   = articles[idx]
 
-    # Build caption (NO external link inline — article text shown here)
     title  = art["title"]
     desc   = art["desc"]
     pub    = art["pub"]
@@ -1940,10 +2392,8 @@ async def _show_news_article(q, ctx, lang, source_key, idx):
 async def news_source_h(update, ctx, source_key):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     await safe_edit(q, tx(lang,"news_loading"))
-    # Start from index 0, but track per-user last-seen to avoid repeats
     seen_key = f"news_seen_{source_key}"
     seen = ctx.user_data.get(seen_key, set())
-    # find first unseen index
     articles = rss_cache_get(source_key) or fetch_rss(source_key, 30)
     if articles: rss_cache_set(source_key, articles)
     start_idx = 0
@@ -1953,7 +2403,6 @@ async def news_source_h(update, ctx, source_key):
                 start_idx = i
                 break
         else:
-            # all seen → reset
             ctx.user_data[seen_key] = set()
             start_idx = 0
     ctx.user_data[seen_key] = seen | {articles[start_idx]["guid"]} if articles else seen
@@ -1970,13 +2419,11 @@ async def news_page_h(update, ctx):
     """Handle news_page_{source}_{idx} callbacks."""
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     parts = q.data.split("_")
-    # format: news_page_news_nasa_3  →  parts = ['news','page','news','nasa','3']
     try:
         idx = int(parts[-1])
         source_key = "_".join(parts[2:-1])
     except Exception:
         await safe_answer(q); return
-    # mark as seen
     seen_key = f"news_seen_{source_key}"
     articles = rss_cache_get(source_key) or []
     if articles and idx < len(articles):
@@ -1984,8 +2431,13 @@ async def news_page_h(update, ctx):
         seen.add(articles[idx]["guid"])
         ctx.user_data[seen_key] = seen
     await _show_news_article(q, ctx, lang, source_key, idx)
+# ── End: NEWS HANDLERS ────────────────────────────────────────────────────────
 
 
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: SCHEDULED JOB HANDLERS (asteroid/meteor/space weather/lunar alerts,   ║
+#        time capsule delivery)                                                  ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def job_asteroid_alert(context):
     subs=load_subscribers(); chat_ids=subs.get("asteroids",[])
     if not chat_ids: return
@@ -2067,7 +2519,12 @@ async def job_check_capsules(context):
             except Exception as e: logger.warning(f"Capsule {cap.get('chat_id')}: {e}")
         else: remaining.append(cap)
     if len(remaining)!=len(capsules): save_capsules(remaining)
+# ── End: SCHEDULED JOB HANDLERS ──────────────────────────────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: NAVIGATION HANDLERS (back, unknown message)                            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def back_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     await safe_edit(q,tx(lang,"main_menu"),reply_markup=main_menu_kb(lang))
@@ -2075,8 +2532,12 @@ async def back_h(update, ctx):
 async def unknown(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     lang=get_lang(ctx)
     await update.message.reply_text(tx(lang,"unknown"),reply_markup=main_menu_kb(lang))
+# ── End: NAVIGATION HANDLERS ──────────────────────────────────────────────────
 
-# ── CALLBACK ROUTER ───────────────────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: CALLBACK ROUTER — IMG_MAP, DIRECT_MAP, CAT_MAP                        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 IMG_MAP = {
     "epic": EARTH_Q, "gallery": GALLERY_Q,
     "earth_night": ["earth at night city lights nasa","night lights satellite ISS","city lights from space"],
@@ -2122,7 +2583,6 @@ IMG_MAP = {
     "rocket_engines": ["rocket engine RS-25 nasa","raptor engine test fire","saturn V engine f1","engine plume rocket"],
     "tornadoes": ["tornado from space satellite","supercell storm satellite","tornado weather damage aerial"],
     "space_food": ["space food astronaut nasa ISS","astronaut eating weightless","food packaging ISS"],
-    # Static text sections — now get images too
     "kuiper_belt": ["kuiper belt pluto new horizons","dwarf planets kuiper belt","arrokoth new horizons flyby"],
     "mars_colonization": ["mars base concept nasa","mars colony artist render","spacex starship mars"],
     "space_medicine": ["astronaut health medical space","bone loss microgravity","space medicine ISS experiments"],
@@ -2131,9 +2591,7 @@ IMG_MAP = {
     "space_records": ["cosmonaut long duration space record","ISS long stay astronaut","Voyager 1 distance solar system"],
     "space_stations": ["international space station ISS orbit","ISS exterior solar panels","space station earth view"],
     "women_in_space": ["women astronauts nasa ISS","Sally Ride nasa first american","female astronaut spacewalk"],
-    "rocket_engines": ["rocket engine RS-25 nasa","raptor engine test fire","saturn V engine f1"],
     "kuiper": ["kuiper belt pluto new horizons","dwarf planets kuiper belt","arrokoth new horizons flyby"],
-    # Previously missing callbacks — now handled
     "ozone": ["ozone layer nasa satellite","ozone hole antarctica","ozone depletion south pole"],
     "ocean_currents": ["ocean currents satellite nasa","gulf stream atlantic satellite","ocean circulation pattern"],
     "seti": ["radio telescope dish array","very large array VLA","arecibo telescope history","radio telescope night sky"],
@@ -2143,11 +2601,11 @@ IMG_MAP = {
     "radioastro": ["very large array VLA telescope","radio galaxy jets nasa","radio telescope dish"],
     "grb": ["gamma ray burst nasa swift","gamma ray sky fermi telescope","GRB afterglow optical"],
     "dark_energy": ["supernovae accelerating universe","dark energy survey telescope","type Ia supernova distance"],
-    "space_stations": ["international space station ISS orbit","ISS exterior solar panels","space station earth view"],
-    "women_in_space": ["women astronauts nasa","Sally Ride nasa first american","female astronaut ISS spacewalk"],
     "planet_alignment": ["planet parade conjunction sky","planets alignment photo","multiple planets night sky"],
     "solar_eclipse": ["solar eclipse totality","total solar eclipse corona diamond ring","eclipse path shadow"],
     "orbital_scale": ["solar system scale comparison","planets size comparison nasa","solar system distance scale"],
+    "red_giants": ["red giant star nasa","betelgeuse red supergiant","red giant stellar evolution"],
+    "rocket_engines": ["rocket engine RS-25 nasa","raptor engine test fire","saturn V engine f1"],
 }
 
 DIRECT_MAP = {
@@ -2178,12 +2636,11 @@ DIRECT_MAP = {
     "mars_rover_live":    mars_rover_live_h,
     "nasa_tv":            nasa_tv_h,
     "lunar_calendar":     lunar_calendar_h,
-    # News sources
-    "news_nasa":         news_nasa_h,
-    "news_sfn":          news_sfn_h,
-    "news_spacenews":    news_spacenews_h,
-    "news_spacedotcom":  news_spacedotcom_h,
-    "news_planetary":    news_planetary_h,
+    "news_nasa":          news_nasa_h,
+    "news_sfn":           news_sfn_h,
+    "news_spacenews":     news_spacenews_h,
+    "news_spacedotcom":   news_spacedotcom_h,
+    "news_planetary":     news_planetary_h,
 }
 
 CAT_MAP = {
@@ -2196,13 +2653,18 @@ CAT_MAP = {
     "cat_interact":  (cat_interact_kb,  "title_interact"),
     "cat_news":      (cat_news_kb,      "title_news"),
 }
+# ── End: CALLBACK ROUTER — IMG_MAP, DIRECT_MAP, CAT_MAP ──────────────────────
 
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: CALLBACK ROUTER FUNCTION                                                ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 async def callback_router(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     q=update.callback_query; cb=q.data; lang=get_lang(ctx)
-    if cb=="choose_lang":       await choose_lang_h(update,ctx); return
-    if cb.startswith("setlang_"): await setlang_h(update,ctx); return
-    if cb=="back":              await back_h(update,ctx); return
-    if cb=="noop":              await safe_answer(q); return
+    if cb=="choose_lang":           await choose_lang_h(update,ctx); return
+    if cb.startswith("setlang_"):   await setlang_h(update,ctx); return
+    if cb=="back":                  await back_h(update,ctx); return
+    if cb=="noop":                  await safe_answer(q); return
     if cb.startswith("news_page_"): await news_page_h(update,ctx); return
     if cb in CAT_MAP:
         kb_fn,title_key=CAT_MAP[cb]; await safe_answer(q)
@@ -2217,10 +2679,9 @@ async def callback_router(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if cb in STATIC_TEXTS:
         await safe_answer(q)
         texts=STATIC_TEXTS[cb]; text=texts.get(lang,texts.get("en",""))
-        # Try to find an image for static text sections too
         img_queries = IMG_MAP.get(cb, [])
         if img_queries:
-            await safe_answer(q); await safe_edit(q,"⏳...")
+            await safe_edit(q,"⏳...")
             await send_nasa_image(q, ctx, img_queries, cb)
         else:
             await safe_edit(q,text[:4096],reply_markup=back_kb(lang,cb,ctx))
@@ -2229,8 +2690,12 @@ async def callback_router(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await safe_answer(q); await safe_edit(q,"⏳...")
         await send_nasa_image(q,ctx,IMG_MAP[cb],cb); return
     await safe_answer(q)
+# ── End: CALLBACK ROUTER FUNCTION ────────────────────────────────────────────
 
-# ── FLASK ROUTES ──────────────────────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: FLASK ROUTES (webhook endpoint, health check)                          ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 @flask_app.route("/")
 def index(): return "🚀 NASA Bot is alive!", 200
 
@@ -2249,8 +2714,12 @@ def webhook():
 async def process_update(data):
     update=Update.de_json(data,tg_app.bot)
     await tg_app.process_update(update)
+# ── End: FLASK ROUTES ─────────────────────────────────────────────────────────
 
-# ── STARTUP ───────────────────────────────────────────────────────────────────
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: BOT SETUP & STARTUP (setup_bot, set_bot_descriptions, init_worker)    ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 def _run_loop(loop):
     asyncio.set_event_loop(loop)
     loop.run_forever()
@@ -2274,7 +2743,6 @@ async def setup_bot():
     builder=Application.builder().token(TELEGRAM_TOKEN)
     tg_app=builder.build()
 
-    # ConversationHandlers — per_message=True fixes the PTBUserWarning
     planet_conv=ConversationHandler(
         entry_points=[CallbackQueryHandler(planet_calc_start,pattern="^planet_calc$")],
         states={
@@ -2343,3 +2811,4 @@ def init_worker():
 if __name__=="__main__":
     init_worker()
     flask_app.run(host="0.0.0.0",port=PORT)
+# ── End: BOT SETUP & STARTUP ──────────────────────────────────────────────────
