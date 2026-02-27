@@ -2790,6 +2790,1305 @@ CAT_MAP = {
 DIRECT_MAP.update(NEW_DIRECT_MAP)
 CAT_MAP.update(NEW_CAT_MAP)
 # ── End: CALLBACK ROUTER — IMG_MAP, DIRECT_MAP, CAT_MAP ──────────────────────
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# PART 3 — 15 NEW FEATURES                                                      ║
+# Place BEFORE setup_bot() in the combined file (after part2 handlers)          ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+#
+# INTEGRATION — add these 2 lines to setup_bot() after the existing handlers:
+#   for h in get_new_conv_handlers(): tg_app.add_handler(h)
+#   if jq: register_new_jobs(jq)
+#
+# INTEGRATION — add these 2 lines after DIRECT_MAP = {...} in part2:
+#   DIRECT_MAP.update(NEW_DIRECT_MAP)
+#   CAT_MAP.update(NEW_CAT_MAP)
+#
+# INTEGRATION — add to part1 translations (each lang):
+#   See TRANSLATION KEYS block below
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: NEW CONVERSATION STATE CONSTANTS                                        ║
+# (add these to CONVERSATION HANDLER STATES block in part1)                     ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+ISS_CITY      = 10
+DICT_TERM     = 11
+QA_QUESTION   = 12
+ROCKET_STEP   = 13
+SMART_KP      = 14
+SMART_LD      = 15
+CHALLENGE_ANS = 16
+COURSE_ENROLL = 17
+# ── End: NEW CONVERSATION STATE CONSTANTS ─────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: NEW ENV VARS                                                            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+CLAUDE_MODEL      = "claude-haiku-4-5-20251001"
+# ── End: NEW ENV VARS ─────────────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: NEW STORAGE HELPERS                                                     ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+FAVORITES_FILE    = "favorites.json"
+ACHIEVEMENTS_FILE = "achievements.json"
+STATS_FILE        = "user_stats.json"
+SMART_ALERTS_FILE = "smart_alerts.json"
+COURSE_FILE       = "course_progress.json"
+
+def _jload(f, d):
+    try:
+        with open(f) as fp: return json.load(fp)
+    except: return d
+
+def _jsave(f, data):
+    try:
+        with open(f,"w") as fp: json.dump(data,fp,ensure_ascii=False,indent=2)
+    except Exception as e: logger.error(f"_jsave {f}: {e}")
+
+def load_favorites():     return _jload(FAVORITES_FILE, {})
+def save_favorites(d):    _jsave(FAVORITES_FILE, d)
+def load_achievements():  return _jload(ACHIEVEMENTS_FILE, {})
+def save_achievements(d): _jsave(ACHIEVEMENTS_FILE, d)
+def load_stats():         return _jload(STATS_FILE, {})
+def save_stats(d):        _jsave(STATS_FILE, d)
+def load_smart_alerts():  return _jload(SMART_ALERTS_FILE, {})
+def save_smart_alerts(d): _jsave(SMART_ALERTS_FILE, d)
+def load_course():        return _jload(COURSE_FILE, {})
+def save_course(d):       _jsave(COURSE_FILE, d)
+# ── End: NEW STORAGE HELPERS ──────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: NEW STATIC DATA                                                         ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# ── Космический словарь (25 терминов) ─────────────────────────────────────────
+SPACE_DICT = {
+    "blackhole":   {"emoji":"🕳","ru":("Чёрная дыра","Область пространства с гравитацией настолько мощной, что даже свет не может её покинуть. Образуется при коллапсе массивной звезды.","Сверхмассивная ЧД в центре M87 имеет массу 6,5 млрд Солнц"),"en":("Black Hole","Region where gravity is so strong that not even light can escape. Forms from the collapse of a massive star.","The M87 black hole weighs 6.5 billion solar masses")},
+    "quasar":      {"emoji":"💥","ru":("Квазар","Активное ядро далёкой галактики, питаемое сверхмассивной чёрной дырой. Самые яркие объекты во Вселенной.","Квазар 3C 273 виден в любительский телескоп"),"en":("Quasar","Active galactic nucleus powered by a supermassive black hole. The brightest objects in the universe.","Quasar 3C 273 is visible through amateur telescopes")},
+    "pulsar":      {"emoji":"📡","ru":("Пульсар","Нейтронная звезда, быстро вращающаяся и испускающая пучки радиоволн. Вращается до 700 оборотов в секунду.","Первый пульсар открыла Джоселин Белл в 1967 году"),"en":("Pulsar","Rapidly rotating neutron star emitting beams of radio waves. Can spin up to 700 times per second.","The first pulsar was discovered by Jocelyn Bell in 1967")},
+    "nebula":      {"emoji":"🌌","ru":("Туманность","Огромное облако газа и пыли в космосе. Бывают эмиссионные (светятся), отражательные и тёмные.","Туманность Орёл размером 90×65 световых лет"),"en":("Nebula","Vast cloud of gas and dust in space. Can be emission, reflection, or dark types.","The Eagle Nebula spans 90×65 light-years")},
+    "redshift":    {"emoji":"🔴","ru":("Красное смещение","Смещение спектра объекта к красному концу при удалении от наблюдателя. Доказывает расширение Вселенной.","Именно по красному смещению Хаббл открыл расширение Вселенной"),"en":("Redshift","Shift of an object's spectrum toward red as it moves away. Proves the universe is expanding.","Hubble used redshift to discover the universe's expansion")},
+    "darkmatter":  {"emoji":"🌑","ru":("Тёмная материя","Невидимое вещество, составляющее ~27% Вселенной. Обнаруживается только по гравитационному влиянию на обычную материю.","Нет ни одного прямого наблюдения — только косвенные доказательства"),"en":("Dark Matter","Invisible matter making up ~27% of the universe. Only detected by its gravitational effects on visible matter.","Not one direct observation exists — only indirect evidence")},
+    "darkener":    {"emoji":"⚫","ru":("Тёмная энергия","Загадочная сила, ускоряющая расширение Вселенной. Составляет ~68% всей энергии Вселенной.","Открыта в 1998 году при наблюдении сверхновых Ia"),"en":("Dark Energy","Mysterious force accelerating the universe's expansion. Makes up ~68% of the universe's total energy.","Discovered in 1998 studying Type Ia supernovae")},
+    "singularity": {"emoji":"♾","ru":("Сингулярность","Точка бесконечной плотности в центре чёрной дыры или в начале Большого взрыва. Уравнения физики здесь перестают работать.","Сингулярность — это граница наших знаний о физике"),"en":("Singularity","Point of infinite density at a black hole's center or at the Big Bang. Physics equations break down here.","A singularity marks the boundary of our physical knowledge")},
+    "neutronstar": {"emoji":"⭐","ru":("Нейтронная звезда","Сверхплотный остаток взорвавшейся звезды. Чайная ложка вещества весит 1 млрд тонн.","Размер — ~20 км, но масса в 2 раза больше Солнца"),"en":("Neutron Star","Ultra-dense remnant of an exploded star. One teaspoon of material weighs 1 billion tons.","Roughly 20 km across but twice the mass of our Sun")},
+    "gravitylens": {"emoji":"🔭","ru":("Гравитационное линзирование","Искривление пути света вблизи массивного объекта. Используется для обнаружения тёмной материи и далёких галактик.","Эйнштейн предсказал этот эффект в 1915 году"),"en":("Gravitational Lensing","Bending of light near a massive object. Used to detect dark matter and distant galaxies.","Einstein predicted this effect in 1915")},
+    "exoplanet":   {"emoji":"🪐","ru":("Экзопланета","Планета, вращающаяся вокруг другой звезды. Открыто более 5700 экзопланет. Некоторые находятся в зоне обитаемости.","Первую экзопланету подтвердили в 1992 году"),"en":("Exoplanet","Planet orbiting another star. Over 5,700 confirmed. Some lie in the habitable zone.","The first confirmed exoplanet was in 1992")},
+    "event_horizon":{"emoji":"🌀","ru":("Горизонт событий","Граница вокруг чёрной дыры, за которую ничто не возвращается. Не физическая поверхность, а точка невозврата.","Горизонт событий ЧД M87 размером с Солнечную систему"),"en":("Event Horizon","Boundary around a black hole beyond which nothing returns. Not a physical surface — a point of no return.","M87's event horizon is the size of our solar system")},
+    "supernova":   {"emoji":"💫","ru":("Сверхновая","Мощнейший звёздный взрыв. За секунды высвобождает больше энергии, чем Солнце за всю жизнь.","Сверхновая 1987A — ближайшая за 400 лет"),"en":("Supernova","The most powerful stellar explosion. Releases more energy in seconds than the Sun in its lifetime.","Supernova 1987A was the closest in 400 years")},
+    "cosmicweb":   {"emoji":"🕸","ru":("Космическая паутина","Крупнейшая структура Вселенной: нити галактик, узлы и пустоты. Растянута на миллиарды световых лет.","Похожа на нейронную сеть мозга — случайное совпадение?"),"en":("Cosmic Web","The universe's largest structure: filaments of galaxies, nodes, and voids. Spans billions of light-years.","It resembles a neural network — coincidence?")},
+    "antimatter":  {"emoji":"⚡","ru":("Антиматерия","Зеркальная копия обычной материи с противоположным зарядом. При встрече с материей аннигилирует.","Сделать 1 г антиматерии = стоимость бюджета NASA за 1000 лет"),"en":("Antimatter","Mirror copy of ordinary matter with opposite charge. Annihilates on contact with matter.","Producing 1g of antimatter would cost NASA's budget × 1000 years")},
+    "redgiant":    {"emoji":"🔴","ru":("Красный гигант","Стадия умирающей звезды — она расширяется, охлаждается и краснеет. Солнце станет красным гигантом через 5 млрд лет.","Бетельгейзе уже красный гигант и скоро взорвётся"),"en":("Red Giant","Dying star stage — it expands, cools, and turns red. Our Sun will become one in 5 billion years.","Betelgeuse is already a red giant nearing explosion")},
+    "wormhole":    {"emoji":"🌀","ru":("Червоточина","Гипотетический тоннель в пространстве-времени, соединяющий далёкие точки. Разрешена уравнениями ОТО, но не обнаружена.","Называется червоточиной потому что червяк прогрызает яблоко короче"),"en":("Wormhole","Hypothetical tunnel in spacetime connecting distant points. Allowed by GR equations but never observed.","Named 'wormhole' as a worm tunneling through an apple takes a shorter path")},
+    "magnetar":    {"emoji":"🧲","ru":("Магнетар","Нейтронная звезда с магнитным полем в 10¹⁵ раз сильнее земного. Вспышки магнетаров достигают Земли с расстояния 50 000 св. лет.","SGR 1806-20 в 2004 году отправил вспышку видимую с Земли"),"en":("Magnetar","Neutron star with a magnetic field 10¹⁵ times Earth's. Magnetar flares reach us from 50,000 light-years away.","SGR 1806-20 sent a flare in 2004 visible from Earth")},
+    "lightyear":   {"emoji":"📏","ru":("Световой год","Расстояние, которое свет преодолевает за год — ~9,46 трлн км. НЕ единица времени!","До ближайшей звезды Проксима Центавра — 4,24 световых года"),"en":("Light Year","Distance light travels in one year — ~9.46 trillion km. NOT a unit of time!","Proxima Centauri, the nearest star, is 4.24 light-years away")},
+    "spacetime":   {"emoji":"🕸","ru":("Пространство-время","Единое четырёхмерное пространство (3D + время) по Эйнштейну. Масса искривляет пространство-время — это и есть гравитация.","GPS-спутники должны делать поправку на искривление пространства-времени"),"en":("Spacetime","Einstein's unified 4D fabric (3D + time). Mass warps spacetime — that IS gravity.","GPS satellites must correct for spacetime curvature")},
+    "hawkingradiation":{"emoji":"🌡","ru":("Излучение Хокинга","Теоретическое излучение чёрных дыр, из-за которого они медленно испаряются. Для ЧД звёздной массы испарение займёт 10⁶⁷ лет.","Никогда не наблюдалось — слишком слабое для современных приборов"),"en":("Hawking Radiation","Theoretical radiation from black holes causing slow evaporation. A stellar-mass BH takes 10⁶⁷ years to evaporate.","Never observed — too faint for current instruments")},
+    "accretiondisk":{"emoji":"💫","ru":("Аккреционный диск","Плоское вращающееся облако вещества вокруг чёрной дыры или нейтронной звезды. Раскаляется до миллионов градусов.","Вещество в диске разгоняется до 30% скорости света"),"en":("Accretion Disk","Flat rotating cloud of matter around a black hole or neutron star. Heats up to millions of degrees.","Material in the disk accelerates to 30% of light speed")},
+    "parallax":    {"emoji":"📐","ru":("Параллакс","Метод измерения расстояний до звёзд по смещению их видимого положения при движении Земли.","Точно работает до 1000 световых лет — дальше погрешность велика"),"en":("Parallax","Method to measure star distances using their apparent shift as Earth orbits the Sun.","Accurate up to 1,000 light-years — beyond that errors grow large")},
+    "oortcloud":   {"emoji":"☁","ru":("Облако Оорта","Огромная сферическая оболочка ледяных тел на краю Солнечной системы. Источник долгопериодических комет.","Простирается до 100 000 а.е. — почти до Альфы Центавра"),"en":("Oort Cloud","Vast spherical shell of icy bodies at the edge of the Solar System. Source of long-period comets.","Extends up to 100,000 AU — nearly reaching Alpha Centauri")},
+    "habzone":     {"emoji":"🌿","ru":("Зона обитаемости","Расстояние от звезды, при котором на планете может существовать жидкая вода. Иногда называют 'зоной Златовласки'.","Земля находится почти идеально в центре зоны обитаемости"),"en":("Habitable Zone","Distance from a star where liquid water can exist on a planet's surface. Also called the Goldilocks zone.","Earth sits nearly perfectly in the center of our habitable zone")},
+}
+
+DICT_KEYS = list(SPACE_DICT.keys())
+
+# ── Активные миссии (12) ──────────────────────────────────────────────────────
+MISSIONS_DATA = [
+    {"name":"🔭 James Webb Space Telescope","agency":"NASA/ESA/CSA","type":"Observatory","launched":"Dec 25, 2021","status":"🟢 Operational","progress":100,"orbit":"L2 Lagrange point","desc":"Infrared successor to Hubble, studying the first galaxies and exoplanet atmospheres.","url":"https://webb.nasa.gov"},
+    {"name":"🚀 Perseverance Rover","agency":"NASA","type":"Mars Rover","launched":"Jul 30, 2020","status":"🟢 Operational","progress":100,"orbit":"Jezero Crater, Mars","desc":"Collecting rock samples for future return to Earth. Also deployed the Ingenuity helicopter.","url":"https://mars.nasa.gov/mars2020"},
+    {"name":"🌙 Artemis Program","agency":"NASA","type":"Crewed Lunar","launched":"Nov 16, 2022 (I)","status":"🟡 Artemis II prep","progress":45,"orbit":"Lunar orbit","desc":"Returning humans to the Moon. Artemis II (first crewed flight) planned for 2025–2026.","url":"https://www.nasa.gov/artemis"},
+    {"name":"🛸 Voyager 1","agency":"NASA","type":"Interstellar","launched":"Sep 5, 1977","status":"🟢 Active — 24B km","progress":100,"orbit":"Interstellar space","desc":"Farthest human-made object. Still sending data from beyond the heliosphere.","url":"https://voyager.jpl.nasa.gov"},
+    {"name":"🪐 Europa Clipper","agency":"NASA","type":"Outer Planets","launched":"Oct 14, 2024","status":"🟢 En route to Jupiter","progress":15,"orbit":"En route","desc":"Will perform 49 flybys of Europa to study its subsurface ocean for habitability.","url":"https://europa.nasa.gov"},
+    {"name":"🌞 Parker Solar Probe","agency":"NASA","type":"Solar","launched":"Aug 12, 2018","status":"🟢 Operational","progress":100,"orbit":"Solar orbit","desc":"Closest spacecraft to the Sun ever. Flew through the solar corona in 2021.","url":"https://www.nasa.gov/parker"},
+    {"name":"🔴 Mars Express","agency":"ESA","type":"Mars Orbiter","launched":"Jun 2, 2003","status":"🟢 Operational","progress":100,"orbit":"Mars orbit","desc":"Over 20 years mapping Mars. Confirmed subsurface water ice in 2018.","url":"https://www.esa.int/marsexpress"},
+    {"name":"🌌 Gaia","agency":"ESA","type":"Astrometry","launched":"Dec 19, 2013","status":"🟢 Operational","progress":100,"orbit":"L2 point","desc":"Mapping 1 billion stars in the Milky Way with unprecedented precision.","url":"https://www.esa.int/gaia"},
+    {"name":"🪐 Cassini Legacy","agency":"NASA/ESA","type":"Saturn orbiter","launched":"Oct 15, 1997","status":"⚪ Completed 2017","progress":100,"orbit":"Burned in Saturn","desc":"13-year Saturn mission. Discovered Enceladus geysers and Titan's lakes.","url":"https://saturn.jpl.nasa.gov"},
+    {"name":"🚀 SpaceX Starship","agency":"SpaceX","type":"Super Heavy Rocket","launched":"2023 (tests)","status":"🟡 Test flights","progress":60,"orbit":"Suborbital/LEO tests","desc":"Fully reusable rocket for Moon, Mars and beyond. Multiple integrated flight tests in 2023–2024.","url":"https://www.spacex.com/vehicles/starship"},
+    {"name":"🌍 Sentinel-6","agency":"ESA/NASA","type":"Earth Obs.","launched":"Nov 21, 2020","status":"🟢 Operational","progress":100,"orbit":"LEO ~1336 km","desc":"Monitoring global sea level rise with millimeter precision.","url":"https://www.esa.int/sentinel6"},
+    {"name":"☄️ DART Mission","agency":"NASA","type":"Planetary Defense","launched":"Nov 24, 2021","status":"⚪ Success — 2022","progress":100,"orbit":"Mission complete","desc":"First test of asteroid deflection. Successfully changed Dimorphos's orbit by 32 minutes.","url":"https://dart.jhuapl.edu"},
+]
+
+# ── Система достижений (12 значков) ───────────────────────────────────────────
+ACHIEVEMENTS_DEF = [
+    {"id":"first_apod",   "emoji":"🌅","ru":"Первый APOD",       "en":"First APOD",       "condition":"apod>=1"},
+    {"id":"apod10",       "emoji":"📸","ru":"10 снимков NASA",   "en":"10 NASA Photos",   "condition":"apod>=10"},
+    {"id":"apod50",       "emoji":"🏅","ru":"50 снимков NASA",   "en":"50 NASA Photos",   "condition":"apod>=50"},
+    {"id":"first_quiz",   "emoji":"🧠","ru":"Первый квиз",       "en":"First Quiz",       "condition":"quiz>=1"},
+    {"id":"quiz_perfect", "emoji":"🏆","ru":"Квиз без ошибок",   "en":"Perfect Quiz",     "condition":"quiz_perfect>=1"},
+    {"id":"explorer",     "emoji":"🚀","ru":"Исследователь",     "en":"Explorer",         "condition":"sections>=5"},
+    {"id":"mars_fan",     "emoji":"🔴","ru":"Фанат Марса",       "en":"Mars Fan",         "condition":"mars>=3"},
+    {"id":"news_reader",  "emoji":"📰","ru":"Читатель новостей", "en":"News Reader",      "condition":"news>=5"},
+    {"id":"week_streak",  "emoji":"🔥","ru":"7 дней подряд",     "en":"7-Day Streak",     "condition":"streak>=7"},
+    {"id":"challenge_win","emoji":"🎯","ru":"Первый челлендж",   "en":"First Challenge",  "condition":"challenge>=1"},
+    {"id":"favorite5",    "emoji":"⭐","ru":"5 избранных",       "en":"5 Favorites",      "condition":"favorites>=5"},
+    {"id":"night_owl",    "emoji":"🦉","ru":"Ночной наблюдатель","en":"Night Owl",        "condition":"night_session>=1"},
+]
+
+# ── Ежедневный челлендж (20 объектов) ─────────────────────────────────────────
+CHALLENGE_DATA = [
+    {"img_q":"Pillars of Creation Eagle Nebula Hubble","answer":1,"options":["Milky Way core","Pillars of Creation 🌌","Saturn's rings","Mars surface"],"fact":"The Pillars of Creation in the Eagle Nebula are 5 light-years tall and active star-forming regions."},
+    {"img_q":"Great Red Spot Jupiter Cassini","answer":0,"options":["Jupiter's Great Red Spot 🔴","Solar flare SDO","Mars dust storm","Neptune's storm"],"fact":"Jupiter's Great Red Spot is a storm that has raged for over 350 years, bigger than Earth."},
+    {"img_q":"Crab Nebula pulsar supernova remnant","answer":2,"options":["Andromeda galaxy","Cat's Eye nebula","Crab Nebula 💥","Whirlpool galaxy"],"fact":"The Crab Nebula is the remnant of a supernova observed by Chinese astronomers in 1054 AD."},
+    {"img_q":"Saturn rings Cassini close up","answer":3,"options":["Uranus rings","Jupiter rings","Neptune rings","Saturn's rings 🪐"],"fact":"Saturn's rings are incredibly thin — only 10–100 meters deep despite spanning 282,000 km."},
+    {"img_q":"Horsehead Nebula dark nebula Orion","answer":1,"options":["Carina nebula","Horsehead Nebula 🐴","Helix nebula","Boomerang nebula"],"fact":"The Horsehead Nebula is a dark cloud of gas and dust silhouetted against a glowing background."},
+    {"img_q":"Whirlpool Galaxy M51 Hubble spiral","answer":2,"options":["Andromeda M31","Triangulum Galaxy","Whirlpool Galaxy M51 🌀","Sombrero Galaxy"],"fact":"The Whirlpool Galaxy (M51) is being distorted by gravitational interaction with its companion NGC 5195."},
+    {"img_q":"Enceladus geysers south pole Cassini","answer":0,"options":["Enceladus geysers 💧","Europa surface","Titan surface","Io volcanoes"],"fact":"Enceladus ejects water vapor geysers from its south pole, suggesting a subsurface ocean."},
+    {"img_q":"Hubble Ultra Deep Field galaxies","answer":3,"options":["Star cluster","Milky Way center","Nearby stars","Hubble Ultra Deep Field 🌌"],"fact":"The Hubble Ultra Deep Field contains ~10,000 galaxies in a patch of sky smaller than a grain of sand held at arm's length."},
+    {"img_q":"Olympus Mons Mars volcanic shield","answer":1,"options":["Hawaii volcano","Olympus Mons 🔴","Venus Maxwell Montes","Moon crater"],"fact":"Olympus Mons on Mars is the largest volcano in the Solar System — 22 km high and 600 km wide."},
+    {"img_q":"International Space Station ISS orbit","answer":2,"options":["Tiangong station","Hubble telescope","ISS 🛸","MIR station"],"fact":"The ISS travels at 28,000 km/h and completes an orbit every 90 minutes."},
+    {"img_q":"aurora borealis ISS northern lights","answer":0,"options":["Aurora Borealis 🌈","Noctilucent clouds","Lightning storm","City lights"],"fact":"Auroras occur when solar particles collide with Earth's atmosphere at altitudes of 100–300 km."},
+    {"img_q":"Pluto heart feature New Horizons","answer":3,"options":["Charon","Eris","Makemake","Pluto with Tombaugh Regio 💜"],"fact":"Pluto's heart-shaped region is called Tombaugh Regio, named after Pluto's discoverer."},
+    {"img_q":"Black hole M87 EHT first image","answer":1,"options":["Neutron star","M87 Black Hole 🕳","Quasar jet","Galaxy merger"],"fact":"The first image of a black hole (M87*) was captured in 2019 by the Event Horizon Telescope."},
+    {"img_q":"Titan Saturn moon haze atmosphere Cassini","answer":2,"options":["Venus","Io","Titan 🟠","Triton"],"fact":"Titan is the only moon with a dense atmosphere, liquid lakes of methane on its surface."},
+    {"img_q":"Valles Marineris Mars canyon system","answer":0,"options":["Valles Marineris 🔴","Grand Canyon Arizona","Mariana Trench","Hellas Basin"],"fact":"Valles Marineris stretches 4,000 km — as wide as the USA. It would be the deepest canyon in the Solar System."},
+    {"img_q":"solar flare corona SDO NASA","answer":1,"options":["Jupiter aurora","Solar flare ☀️","Pulsar jets","Magnetar burst"],"fact":"Solar flares can release the energy of 1 billion hydrogen bombs in minutes."},
+    {"img_q":"Andromeda galaxy M31 spiral","answer":3,"options":["Milky Way","Triangulum","Large Magellanic Cloud","Andromeda Galaxy 🌌"],"fact":"Andromeda is on a collision course with the Milky Way — they'll merge in ~4.5 billion years."},
+    {"img_q":"Europa moon Jupiter ice cracks surface","answer":0,"options":["Europa 🧊","Ganymede","Callisto","Io"],"fact":"Europa's subsurface ocean may contain more liquid water than all of Earth's oceans combined."},
+    {"img_q":"comet 67P Rosetta nucleus close up","answer":2,"options":["Asteroid Bennu","Comet Hale-Bopp","Comet 67P Churyumov–Gerasimenko ☄️","Ceres surface"],"fact":"Rosetta mission landed Philae probe on Comet 67P in 2014 — first soft landing on a comet."},
+    {"img_q":"Helix Nebula eye of god planetary","answer":1,"options":["Ant Nebula","Helix Nebula 👁","Ring Nebula","Owl Nebula"],"fact":"The Helix Nebula is nicknamed the 'Eye of God.' It's one of the closest planetary nebulae at 700 light-years."},
+]
+
+# ── Трекер спутников (8 аппаратов с NORAD ID) ─────────────────────────────────
+SATELLITE_CATALOG = {
+    "hubble": {"name":"Hubble Space Telescope","norad":20580,"emoji":"🔭","alt_km":538,"period_min":95,"launched":"Apr 24, 1990","desc":"Legendary telescope in LEO. Over 1.5 million observations, 19,000 scientific papers."},
+    "jwst":   {"name":"James Webb Space Telescope","norad":50463,"emoji":"🌌","alt_km":1500000,"period_min":180*24*60,"launched":"Dec 25, 2021","desc":"At L2 Lagrange point, 1.5 million km from Earth. Observes in infrared."},
+    "iss":    {"name":"International Space Station","norad":25544,"emoji":"🛸","alt_km":408,"period_min":92,"launched":"Nov 20, 1998","desc":"Continuously inhabited since 2000. 6–7 crew at all times."},
+    "tess":   {"name":"TESS","norad":43435,"emoji":"🔍","alt_km":200000,"period_min":13.7*24*60,"launched":"Apr 18, 2018","desc":"Transiting Exoplanet Survey Satellite. Found 400+ confirmed exoplanets."},
+    "chandra":{"name":"Chandra X-ray Observatory","norad":25867,"emoji":"⚡","alt_km":139000,"period_min":64*60,"launched":"Jul 23, 1999","desc":"X-ray telescope in high elliptical orbit. Studies black holes, neutron stars, supernovae."},
+    "tiangong":{"name":"Tiangong Space Station","norad":48274,"emoji":"🇨🇳","alt_km":390,"period_min":92,"launched":"Apr 29, 2021","desc":"China's permanent space station. 3-person crew. Full completion in 2022."},
+    "terra":  {"name":"Terra (Earth Observation)","norad":25994,"emoji":"🌍","alt_km":705,"period_min":99,"launched":"Dec 18, 1999","desc":"NASA's flagship Earth observer. Studies atmosphere, land, ocean interactions."},
+    "gaia":   {"name":"Gaia (ESA)","norad":39479,"emoji":"⭐","alt_km":1500000,"period_min":180*24*60,"launched":"Dec 19, 2013","desc":"Mapping 1 billion stars. At L2 point with JWST. Most precise stellar catalog in history."},
+}
+
+# ── Курс «Астрономия за 30 дней» ─────────────────────────────────────────────
+COURSE_LESSONS = [
+    {"day":1, "title":"🌌 Масштаб Вселенной","text":"Вселенная существует около 13,8 млрд лет. Наблюдаемая часть — сфера диаметром 93 млрд световых лет. В ней ~2 трлн галактик, в каждой — сотни миллиардов звёзд.\n\n💡 *Факт дня:* Если сжать Солнечную систему до размера монеты, Млечный Путь будет размером с США."},
+    {"day":2, "title":"☀️ Наше Солнце","text":"Солнце — звезда класса G2V. Возраст 4,6 млрд лет, температура поверхности 5778 К. Каждую секунду превращает 600 млн тонн водорода в гелий через ядерный синтез.\n\n💡 *Факт дня:* Солнечный свет, который вы видите сейчас, образовался в ядре ~100 000 лет назад."},
+    {"day":3, "title":"🪐 Газовые гиганты","text":"Юпитер и Сатурн — газовые гиганты без твёрдой поверхности. Юпитер больше всех остальных планет Солнечной системы вместе взятых. Кольца Сатурна состоят из льда и камней.\n\n💡 *Факт дня:* Один день на Юпитере — всего 10 часов."},
+    {"day":4, "title":"❄️ Ледяные миры","text":"Уран и Нептун — «ледяные гиганты», богатые водой, метаном и аммиаком в твёрдом состоянии. Уран вращается «на боку» — его полюс направлен почти к Солнцу.\n\n💡 *Факт дня:* На Нептуне дуют ветры 2100 км/ч — самые быстрые в Солнечной системе."},
+    {"day":5, "title":"🌕 Луна — наш спутник","text":"Луна образовалась 4,5 млрд лет назад при столкновении Земли с протопланетой Тейя. Её гравитация стабилизирует ось Земли и создаёт приливы. На Луне нет атмосферы.\n\n💡 *Факт дня:* Луна удаляется от Земли на 3,8 см в год."},
+    {"day":6, "title":"☄️ Кометы и астероиды","text":"Кометы — ледяные тела из внешней Солнечной системы. При приближении к Солнцу образуют кому и хвост. Пояс астероидов между Марсом и Юпитером содержит миллионы объектов.\n\n💡 *Факт дня:* Комета Галлея возвращается каждые 75–76 лет. Следующее появление — 2061 год."},
+    {"day":7, "title":"🌟 Жизнь звезды","text":"Звёзды рождаются в туманностях из облаков газа и пыли. Масса определяет всё: жизнь маленьких звёзд — 100 млрд лет, массивных — 1–10 млн лет. Финал: белый карлик, нейтронная звезда или чёрная дыра.\n\n💡 *Факт дня:* Все атомы тяжелее железа в вашем теле созданы при взрыве сверхновой."},
+    {"day":8, "title":"💥 Взрывы сверхновых","text":"Сверхновые — самые яркие взрывы во Вселенной. За несколько секунд высвобождают больше энергии, чем Солнце за всю жизнь. Именно они обогащают космос тяжёлыми элементами.\n\n💡 *Факт дня:* Сверхновая 1054 года (Крабовидная туманность) была видна днём."},
+    {"day":9, "title":"🕳 Чёрные дыры","text":"Чёрные дыры образуются при коллапсе массивных звёзд. Горизонт событий — точка невозврата. Сверхмассивные ЧД в центрах галактик в миллиарды раз массивнее Солнца.\n\n💡 *Факт дня:* Время вблизи горизонта событий замедляется — эффект предсказан ОТО Эйнштейна."},
+    {"day":10,"title":"🌌 Млечный Путь","text":"Наша галактика — спиральная, диаметром 100 000 световых лет с 100–400 млрд звёзд. Солнце находится в рукаве Ориона, в 26 000 световых лет от центра.\n\n💡 *Факт дня:* Млечный Путь вращается: Солнце совершает оборот за 225 млн лет — один «галактический год»."},
+    {"day":11,"title":"🔭 История телескопов","text":"Галилей направил телескоп в небо в 1609 году. С тех пор телескопы ушли в космос: Хаббл (1990), Спитцер, Чандра, JWST (2021). Каждое поколение открывало невидимую прежде Вселенную.\n\n💡 *Факт дня:* JWST в 100 раз мощнее Хаббла и видит первые галактики после Большого взрыва."},
+    {"day":12,"title":"🚀 Эра космонавтики","text":"4 октября 1957 — первый спутник. 12 апреля 1961 — Гагарин. 20 июля 1969 — Армстронг на Луне. За 65 лет человечество отправило 600+ космонавтов, 200+ миссий.\n\n💡 *Факт дня:* Программа Аполлон доставила 382 кг лунного грунта на Землю."},
+    {"day":13,"title":"🌍 Земля из космоса","text":"«Снимок бледно-голубой точки» Вояджера-1 в 1990 году изменил наше восприятие Земли. Фото «Восход Земли» с Аполлона-8 (1968) стало символом экологического движения.\n\n💡 *Факт дня:* На МКС сутки сменяются 16 раз — из-за быстрого орбитального движения."},
+    {"day":14,"title":"🔴 Марс","text":"Красная планета — главная цель будущей экспансии человечества. Марсианские сутки (сол) чуть длиннее земных — 24 ч 37 мин. Rovers Curiosity и Perseverance изучают возможность древней жизни.\n\n💡 *Факт дня:* На Марсе два раза в год бывают глобальные пылевые бури, накрывающие всю планету."},
+    {"day":15,"title":"💧 Жидкая вода в Солнечной системе","text":"Жидкая вода существует не только на Земле: под льдом Европы, Энцелада, Каллисто, Тритона — целые океаны. Энцелад выбрасывает в космос гейзеры воды.\n\n💡 *Факт дня:* Подлёдный океан Европы содержит больше воды, чем все океаны Земли."},
+    {"day":16,"title":"👾 Экзопланеты","text":"Первую экзопланету подтвердили в 1992 году. Сейчас известно 5700+. Методы обнаружения: транзитный (TESS, Кеплер), лучевых скоростей, гравитационного линзирования.\n\n💡 *Факт дня:* Kepler-452b — «двойник Земли» в 1400 световых годах, в зоне обитаемости."},
+    {"day":17,"title":"☢️ Космическая радиация","text":"В открытом космосе нет защиты атмосферы. Солнечные вспышки и галактические лучи опасны для астронавтов. На МКС доза радиации в 10 раз выше земной.\n\n💡 *Факт дня:* За полёт на Луну (8 дней) астронавт получает дозу радиации, эквивалентную 6-месячному пребыванию на МКС."},
+    {"day":18,"title":"🌊 Приливные силы","text":"Луна притягивает разные части Земли с разной силой, вызывая приливы. Приливные силы «замедлили» Луну — она всегда повёрнута к нам одной стороной.\n\n💡 *Факт дня:* Io (спутник Юпитера) разогревается до расплавленного состояния из-за приливных сил самого Юпитера."},
+    {"day":19,"title":"🌑 Тёмная материя и энергия","text":"Обычная материя — лишь 5% Вселенной. 27% — тёмная материя (невидима, обнаруживается по гравитации). 68% — тёмная энергия, ускоряющая расширение Вселенной.\n\n💡 *Факт дня:* Несмотря на 80 лет исследований, природа тёмной материи до сих пор неизвестна."},
+    {"day":20,"title":"🎯 Поиск внеземной жизни","text":"SETI ищет сигналы с 1960 года. Марсоходы ищут следы древней жизни. Астробиологи изучают экстремофилов на Земле как модели для жизни в других мирах.\n\n💡 *Факт дня:* Лучший кандидат — не Марс, а Энцелад: тепло, вода, органика — всё уже известно."},
+    {"day":21,"title":"🛰 Спутники и орбиты","text":"На орбите более 9000 активных и неактивных спутников. Типы орбит: LEO (160–2000 км), MEO, GEO (35 786 км). GPS, погода, ТВ — всё это спутниковые услуги.\n\n💡 *Факт дня:* Первый коммерческий спутник Telstar-1 запущен в 1962 году — транслировал ТВ через Атлантику."},
+    {"day":22,"title":"🌠 Метеоры и метеориты","text":"Каждый день на Землю падает 50–150 тонн космического вещества. Большинство сгорает в атмосфере. Метеоры — «падающие звёзды» — это не звёзды: просто пыль размером с горошину.\n\n💡 *Факт дня:* Самый крупный упавший метеорит — Хоба в Намибии, 60 тонн."},
+    {"day":23,"title":"🔬 Астрохимия","text":"В космосе обнаружено 300+ молекул, включая сахара, аминокислоты, спирт. Органические молекулы найдены в метеоритах и кометах — это строительные блоки жизни.\n\n💡 *Факт дня:* В центре Млечного Пути найдено облако с концентрацией этилового спирта."},
+    {"day":24,"title":"⏱ Теория относительности и космос","text":"ОТО Эйнштейна объясняет гравитацию как искривление пространства-времени. GPS-спутники делают поправку на замедление времени в слабом поле и при движении.\n\n💡 *Факт дня:* Без поправки на относительность GPS ошибался бы на 11 км в сутки."},
+    {"day":25,"title":"🌪 Погода в космосе","text":"Космическая погода — активность Солнца: вспышки, выбросы корональной массы, солнечный ветер. Влияет на спутники, связь, электросети, авиацию.\n\n💡 *Факт дня:* Буря 1989 года обесточила провинцию Квебек на 9 часов из-за перегрузки электросетей."},
+    {"day":26,"title":"🔵 Нейтронные звёзды и пульсары","text":"Нейтронные звёзды — плотнейшие видимые объекты. Диаметр ~20 км, масса 2× масса Солнца. Пульсары — вращающиеся нейтронные звёзды, точнейшие «часы» Вселенной.\n\n💡 *Факт дня:* Пульсар PSR J1748-2446ad вращается 716 раз в секунду."},
+    {"day":27,"title":"🏔 Геология других планет","text":"Марс имел древние реки, озёра, возможно океаны. Венера — вулканически активна. На Плутоне — азотные ледники и горы изо льда высотой 3 км.\n\n💡 *Факт дня:* Вулкан Олимп Монс на Марсе — высочайший в Солнечной системе: 22 км над уровнем равнины."},
+    {"day":28,"title":"📡 Радиоастрономия","text":"Радиотелескопы улавливают радиоволны от далёких объектов. VLA, Arecibo (до 2020), FAST (Китай, 500 м) — крупнейшие. Открытие пульсаров, реликтового излучения — заслуга радиоастрономии.\n\n💡 *Факт дня:* Китайский телескоп FAST обнаружил более 700 новых пульсаров."},
+    {"day":29,"title":"🌐 Будущее космонавтики","text":"Artemis — возвращение на Луну и лунная база к 2030-м. SpaceX Starship — первые люди на Марсе в 2030-х. Космический туризм уже реален. Роботы-телескопы ищут ещё 5000 экзопланет.\n\n💡 *Факт дня:* SpaceX стоит дешевле вывода 1 кг на орбиту в 10+ раз по сравнению с шаттлом."},
+    {"day":30,"title":"🏆 Финал курса — Место человека во Вселенной","text":"Вы прошли путь от Солнца до края Вселенной. Мы — звёздная пыль, способная осознать себя. Каждый атом вашего тела был рождён в сверхновой миллиарды лет назад.\n\n_«Звёзды не беспокоятся о том, наблюдают ли их. Это делаем мы.»_ — Карл Саган\n\n🎓 Поздравляем с завершением курса «Астрономия за 30 дней»!"},
+]
+
+# ── Калькулятор полётного времени ─────────────────────────────────────────────
+FLIGHT_TARGETS = {
+    "moon":    {"name":"🌕 Moon",    "km":384400,    "desc":"Earth's satellite"},
+    "mars":    {"name":"🔴 Mars",    "km":78000000,  "desc":"Avg. closest approach"},
+    "jupiter": {"name":"🪐 Jupiter", "km":628730000, "desc":"Avg. distance"},
+    "saturn":  {"name":"🪐 Saturn",  "km":1277000000,"desc":"Avg. distance"},
+    "pluto":   {"name":"🔵 Pluto",   "km":5906000000,"desc":"Avg. distance"},
+    "proxima": {"name":"⭐ Proxima Centauri","km":40208000000000,"desc":"Nearest star"},
+    "andromeda":{"name":"🌌 Andromeda","km":2.365e19,"desc":"Nearest spiral galaxy"},
+}
+FLIGHT_SPEEDS = {
+    "car":     {"name":"🚗 Car",         "kmh":120},
+    "plane":   {"name":"✈️ Plane",       "kmh":900},
+    "rocket":  {"name":"🚀 Rocket (Apollo)","kmh":39600},
+    "starship":{"name":"🛸 Starship (projected)","kmh":100000},
+    "light":   {"name":"⚡ Lightspeed",  "kmh":1079251200},
+}
+# ── End: NEW STATIC DATA ──────────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: NEW KEYBOARDS                                                           ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+def profile_kb(lang):
+    L=lambda k:tx(lang,k)
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("⭐ "+L("btn_favorites"),    callback_data="favorites_view"),
+         InlineKeyboardButton("📊 "+L("btn_mystats"),     callback_data="my_stats")],
+        [InlineKeyboardButton("🏆 "+L("btn_achievements"),callback_data="achievements"),
+         InlineKeyboardButton("🔔 "+L("btn_smart_alerts"),callback_data="smart_alerts_menu")],
+        [InlineKeyboardButton(L("back_menu"), callback_data="back")],
+    ])
+
+def missions_kb(lang):
+    rows=[]
+    for i,m in enumerate(MISSIONS_DATA):
+        rows.append([InlineKeyboardButton(m["name"][:40],callback_data=f"mission_{i}")])
+    rows.append([InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")])
+    return InlineKeyboardMarkup(rows)
+
+def satellite_kb(lang):
+    rows=[]
+    items=list(SATELLITE_CATALOG.items())
+    for i in range(0,len(items),2):
+        row=[]
+        for key,sat in items[i:i+2]:
+            row.append(InlineKeyboardButton(f"{sat['emoji']} {sat['name'][:15]}",callback_data=f"sat_{key}"))
+        rows.append(row)
+    rows.append([InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")])
+    return InlineKeyboardMarkup(rows)
+
+def flight_target_kb(lang):
+    rows=[]
+    items=list(FLIGHT_TARGETS.items())
+    for i in range(0,len(items),2):
+        row=[InlineKeyboardButton(v["name"],callback_data=f"flight_target_{k}") for k,v in items[i:i+2]]
+        rows.append(row)
+    rows.append([InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")])
+    return InlineKeyboardMarkup(rows)
+
+def flight_speed_kb(lang,target_key):
+    rows=[]
+    for k,v in FLIGHT_SPEEDS.items():
+        rows.append([InlineKeyboardButton(v["name"],callback_data=f"flight_calc_{target_key}_{k}")])
+    rows.append([InlineKeyboardButton(tx(lang,"back_menu"),callback_data="flight_calculator")])
+    return InlineKeyboardMarkup(rows)
+
+def challenge_kb(lang, q_idx, answered=False):
+    q=CHALLENGE_DATA[q_idx]
+    if answered:
+        return InlineKeyboardMarkup([[
+            InlineKeyboardButton("🎯 Next challenge",callback_data="daily_challenge_start"),
+            InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back"),
+        ]])
+    rows=[[InlineKeyboardButton(f"{chr(65+i)}. {opt[:30]}",callback_data=f"challenge_ans_{q_idx}_{i}")] for i,opt in enumerate(q["options"])]
+    rows.append([InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")])
+    return InlineKeyboardMarkup(rows)
+
+def dict_kb(lang):
+    rows=[]
+    items=[(k,v) for k,v in SPACE_DICT.items()]
+    for i in range(0,len(items),3):
+        row=[InlineKeyboardButton(v["emoji"]+" "+(v["ru"][0] if lang=="ru" else v["en"][0])[:14],callback_data=f"dict_{k}") for k,v in items[i:i+3]]
+        rows.append(row)
+    rows.append([InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")])
+    return InlineKeyboardMarkup(rows)
+
+def course_kb(lang):
+    cp=load_course(); cid_str="self"
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎓 Подписаться на курс",callback_data="course_subscribe")],
+        [InlineKeyboardButton("📚 Просмотреть все уроки",callback_data="course_browse")],
+        [InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")],
+    ])
+# ── End: NEW KEYBOARDS ────────────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: ACHIEVEMENT TRACKER                                                     ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+def update_stats(chat_id, action, value=1):
+    """Call this from existing handlers to track user activity."""
+    cid=str(chat_id); stats=load_stats()
+    if cid not in stats:
+        stats[cid]={"apod":0,"quiz":0,"quiz_perfect":0,"mars":0,"news":0,"sections":0,
+                    "challenge":0,"favorites":0,"streak":0,"night_session":0,"days":[]}
+    s=stats[cid]
+    if action in s: s[action]=s.get(action,0)+value
+    today=date.today().isoformat()
+    if today not in s.get("days",[]):
+        s.setdefault("days",[]).append(today)
+        # check streak
+        days=sorted(s["days"])[-8:]
+        streak=1
+        for i in range(len(days)-1,0,-1):
+            d1=datetime.strptime(days[i],"%Y-%m-%d").date()
+            d2=datetime.strptime(days[i-1],"%Y-%m-%d").date()
+            if (d1-d2).days==1: streak+=1
+            else: break
+        s["streak"]=streak
+    # check night (20:00-05:00)
+    h=datetime.now().hour
+    if h>=20 or h<=5: s["night_session"]=s.get("night_session",0)+1
+    save_stats(stats)
+    _check_new_achievements(chat_id, s)
+
+def _check_new_achievements(chat_id, s):
+    cid=str(chat_id); ach=load_achievements()
+    if cid not in ach: ach[cid]={"earned":[]}
+    new_badges=[]
+    for badge in ACHIEVEMENTS_DEF:
+        if badge["id"] in ach[cid]["earned"]: continue
+        cond=badge["condition"]; field,_,val=cond.partition(">=")
+        try:
+            if s.get(field,0)>=int(val):
+                ach[cid]["earned"].append(badge["id"])
+                new_badges.append(badge)
+        except: pass
+    if new_badges:
+        save_achievements(ach)
+    return new_badges
+# ── End: ACHIEVEMENT TRACKER ──────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: SATELLITE TRACKER HANDLER                                               ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def satellite_tracker_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    await safe_edit(q,"🛸 *Satellite Tracker*\n\nSelect a spacecraft:",reply_markup=satellite_kb(lang))
+
+async def sat_detail_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    sat_key=q.data.replace("sat_","")
+    sat=SATELLITE_CATALOG.get(sat_key)
+    if not sat: await safe_edit(q,"❌ Not found",reply_markup=back_kb(lang,ctx=ctx)); return
+    # Try live position from wheretheiss.at or N2YO
+    pos_text=""; url_text=""
+    try:
+        if sat_key=="iss":
+            pos=get_iss_position()
+            pos_text=f"\n🌍 *Live position:* `{pos['lat']:+.3f}°, {pos['lon']:+.3f}°`"
+            url_text=f"\n[📍 Live map](https://www.google.com/maps?q={pos['lat']},{pos['lon']})"
+        else:
+            r=requests.get(f"https://api.wheretheiss.at/v1/satellites/{sat['norad']}",timeout=8)
+            if r.status_code==200:
+                d=r.json()
+                lat=d.get("latitude",0); lon=d.get("longitude",0)
+                alt=d.get("altitude",sat["alt_km"]); spd=d.get("velocity",0)
+                pos_text=f"\n🌍 *Live:* `{lat:+.3f}°, {lon:+.3f}°`\n⬆️ Alt: {alt:.0f} km  |  ⚡ {spd:.0f} km/h"
+                url_text=f"\n[📍 Map](https://www.google.com/maps?q={lat},{lon})"
+    except: pos_text=f"\n📍 Orbit: {sat['alt_km']:,} km"
+    text=(f"{sat['emoji']} *{sat['name']}*\n"
+          f"🚀 Launched: {sat['launched']}\n"
+          f"🔄 Orbital period: {sat.get('period_min',92)} min\n"
+          f"{pos_text}\n\n_{sat['desc']}_{url_text}")
+    await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"satellite_tracker",ctx))
+# ── End: SATELLITE TRACKER HANDLER ───────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: EARTHQUAKE / EONET HANDLER                                              ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def earthquakes_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🌍 Loading...")
+    try:
+        r=requests.get("https://eonet.gsfc.nasa.gov/api/v3/events?category=earthquakes&limit=10&status=open&days=7",timeout=12)
+        r.raise_for_status(); events=r.json().get("events",[])
+    except:
+        events=[]
+    if not events:
+        # Fallback: USGS
+        try:
+            r=requests.get("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/5.0_week.geojson",timeout=12)
+            feats=r.json().get("features",[])[:8]
+            lines=["🌍 *Recent Earthquakes M≥5.0 (USGS)*\n"]
+            for f in feats:
+                p=f["properties"]; c=f["geometry"]["coordinates"]
+                mag=p.get("mag","?"); place=p.get("place","?")[:40]
+                t_ms=p.get("time",0); t_str=datetime.fromtimestamp(t_ms/1000).strftime("%d.%m %H:%M") if t_ms else "?"
+                lat=c[1]; lon=c[0]
+                lines.append(f"⚡ *M{mag}* — {place}\n   📅 {t_str} UTC | [Map](https://www.google.com/maps?q={lat},{lon})\n")
+            text="\n".join(lines)[:4096]
+        except Exception as e:
+            text=f"❌ Could not load earthquake data: {e}"
+    else:
+        lines=["🌍 *NASA EONET Earthquakes (7 days)*\n"]
+        for ev in events[:8]:
+            title=ev.get("title","?"); geom=ev.get("geometry",[{}])
+            coords=geom[0].get("coordinates",[0,0,0]) if geom else [0,0,0]
+            date_ev=(geom[0].get("date","?") or "?")[:16].replace("T"," ")
+            lat,lon=coords[1],coords[0]
+            lines.append(f"⚡ *{title}*\n   📅 {date_ev} | [Map](https://www.google.com/maps?q={lat},{lon})\n")
+        text="\n".join(lines)[:4096]
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔔 Subscribe alerts",callback_data="notif_toggle_earthquakes"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
+    await safe_edit(q,text,reply_markup=kb)
+
+async def job_earthquake_alert(context):
+    subs=load_subscribers(); chat_ids=subs.get("earthquakes",[])
+    if not chat_ids: return
+    try:
+        r=requests.get("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/6.0_day.geojson",timeout=12)
+        feats=r.json().get("features",[])
+        if not feats: return
+        msg="🚨 *Earthquake Alert M≥6.0!*\n\n"
+        for f in feats[:3]:
+            p=f["properties"]; mag=p.get("mag","?"); place=p.get("place","?")[:50]
+            msg+=f"⚡ *M{mag}* — {place}\n"
+        for cid in chat_ids:
+            try: await context.bot.send_message(cid,msg[:4096],parse_mode="Markdown")
+            except: pass
+    except Exception as e: logger.error(f"job_earthquake_alert: {e}")
+# ── End: EARTHQUAKE / EONET HANDLER ──────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: SPACEWEATHER DIGEST                                                     ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def spaceweather_digest_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"☀️ Loading digest...")
+    sections=[]
+    # 1. Kp index
+    try:
+        r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=10); r.raise_for_status()
+        data=r.json(); kp=float(data[-1].get("kp_index",data[-1].get("Kp",0)))
+        kp_bar="🟢" if kp<4 else "🟡" if kp<6 else "🟠" if kp<8 else "🔴"
+        sections.append(f"{kp_bar} *Kp-index:* {kp:.1f}/9")
+    except: sections.append("⚪ Kp: N/A")
+    # 2. Solar wind speed
+    try:
+        r=requests.get("https://services.swpc.noaa.gov/products/solar-wind/plasma-5-minute.json",timeout=10); r.raise_for_status()
+        data=r.json(); spd=float(data[-1][2])
+        sections.append(f"💨 *Solar wind:* {spd:,.0f} km/s")
+    except: sections.append("💨 Solar wind: N/A")
+    # 3. X-ray flux
+    try:
+        r=requests.get("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",timeout=10); r.raise_for_status()
+        flux=float(r.json()[-1].get("flux",0))
+        cls_="X" if flux>=1e-4 else "M" if flux>=1e-5 else "C" if flux>=1e-6 else "B" if flux>=1e-7 else "A"
+        sections.append(f"⚡ *Flares:* Class {cls_} ({flux:.1e} W/m²)")
+    except: sections.append("⚡ Flares: N/A")
+    # 4. Moon
+    emoji,_,_,illum=get_moon_phase(date.today())
+    sections.append(f"{emoji} *Moon:* {illum}% illuminated")
+    text=(f"☀️ *Space Weather Digest*\n📅 {date.today().strftime('%d %b %Y')}\n\n"+"\n".join(sections)+
+          "\n\n[🔗 NOAA SWPC](https://www.swpc.noaa.gov)")
+    await safe_edit(q,text,reply_markup=back_kb(lang,"spaceweather_digest",ctx))
+
+async def job_spaceweather_digest(context):
+    subs=load_subscribers(); chat_ids=subs.get("spaceweather_digest",[])
+    if not chat_ids: return
+    try:
+        sections=[]
+        r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=10)
+        kp=float(r.json()[-1].get("kp_index",0))
+        sections.append(f"🌡 Kp: {kp:.1f}"); sections.append(f"📅 {date.today().strftime('%d %b')}")
+        msg="☀️ *Daily Space Weather*\n\n"+"\n".join(sections)
+        for cid in chat_ids:
+            try: await context.bot.send_message(cid,msg,parse_mode="Markdown")
+            except: pass
+    except Exception as e: logger.error(f"job_spaceweather_digest: {e}")
+# ── End: SPACEWEATHER DIGEST ──────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: EXOPLANET ALERT HANDLER + SCHEDULED JOB                                ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def exoplanet_alert_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔭 Loading discoveries...")
+    try:
+        # NASA Exoplanet Archive — confirmed planets in the last 30 days
+        r=requests.get(
+            "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+pl_name,disc_year,discoverymethod,pl_orbper,pl_rade,st_dist+from+pscomppars+where+disc_year>=2025+order+by+rowupdate+desc&format=json",
+            timeout=15)
+        planets=r.json() if r.status_code==200 else []
+    except: planets=[]
+    if not planets:
+        text=("🔭 *New Exoplanet Discoveries*\n\n"
+              "No recent data available from NASA Archive.\n\n"
+              "Total confirmed exoplanets: *5,700+*\n"
+              "[NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu)")
+    else:
+        text="🔭 *Recent Exoplanet Discoveries*\n\n"
+        for p in planets[:8]:
+            name=p.get("pl_name","?"); method=p.get("discoverymethod","?")
+            dist=p.get("st_dist","?"); period=p.get("pl_orbper","?")
+            try: dist=f"{float(dist):.1f} pc"
+            except: dist=str(dist)
+            try: period=f"{float(period):.1f} days"
+            except: period=str(period)
+            text+=f"🪐 *{name}*\n   Method: {method} | Period: {period} | Dist: {dist}\n\n"
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔔 Weekly alerts",callback_data="notif_toggle_exoplanets"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
+    await safe_edit(q,text[:4096],reply_markup=kb)
+
+async def job_exoplanet_alert(context):
+    subs=load_subscribers(); chat_ids=subs.get("exoplanets",[])
+    if not chat_ids: return
+    try:
+        r=requests.get("https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+pl_name,discoverymethod+from+pscomppars+where+disc_year>=2025+order+by+rowupdate+desc&format=json&maxrec=5",timeout=15)
+        planets=r.json() if r.status_code==200 else []
+        if not planets: return
+        msg="🔭 *New Exoplanet Discoveries This Week!*\n\n"
+        for p in planets[:5]: msg+=f"🪐 *{p.get('pl_name','?')}* — {p.get('discoverymethod','?')}\n"
+        for cid in chat_ids:
+            try: await context.bot.send_message(cid,msg,parse_mode="Markdown")
+            except: pass
+    except: pass
+# ── End: EXOPLANET ALERT HANDLER ─────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: ACHIEVEMENTS HANDLER                                                    ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def achievements_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    cid=str(q.message.chat_id); ach=load_achievements()
+    earned=ach.get(cid,{}).get("earned",[])
+    lines=["🏆 *Achievements*\n"]
+    for badge in ACHIEVEMENTS_DEF:
+        got=badge["id"] in earned
+        name=badge["ru"] if lang=="ru" else badge["en"]
+        lines.append(f"{'✅' if got else '🔒'} {badge['emoji']} {name}")
+    lines.append(f"\n_Earned: {len(earned)}/{len(ACHIEVEMENTS_DEF)}_")
+    await safe_edit(q,"\n".join(lines),reply_markup=back_kb(lang,"cat_interact",ctx))
+# ── End: ACHIEVEMENTS HANDLER ─────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: DAILY HOROSCOPE (TODAY with live Kp + moon)                            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def daily_horoscope_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🌌 Computing...")
+    # Get live Kp
+    kp=0.0
+    try:
+        r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=10)
+        kp=float(r.json()[-1].get("kp_index",r.json()[-1].get("Kp",0)))
+    except: pass
+    # Moon
+    moon_emoji,moon_idx,moon_day,moon_illum=get_moon_phase(date.today())
+    # Star sign based on today's date as "birthday"
+    today=date.today(); sign=get_zodiac(today.month,today.day)
+    # Cosmic energy based on Kp + moon
+    if kp>=7 or moon_idx==4: energy="🔴 High cosmic activity"
+    elif kp>=4 or moon_idx in (2,6): energy="🟡 Moderate cosmic activity"
+    else: energy="🟢 Calm cosmic day"
+    DAILY_ADVICE={
+        "ru":["Идеальный день для новых начинаний","Время для размышлений","Обрати взгляд на звёзды","Сила Вселенной на твоей стороне","День открытий и чудес"],
+        "en":["Perfect day for new beginnings","Time for reflection","Look up to the stars","The universe's force is with you","A day of discoveries"],
+        "he":["יום מושלם להתחלות חדשות","זמן לחשיבה","הבט לכוכבים","כוח היקום איתך","יום של גילויים"],
+        "ar":["يوم مثالي لبدايات جديدة","وقت للتأمل","انظر إلى النجوم","قوة الكون معك","يوم اكتشافات"],
+    }
+    seed=today.toordinal()%len(DAILY_ADVICE["en"])
+    advice=DAILY_ADVICE.get(lang,DAILY_ADVICE["en"])[seed]
+    text=(f"🌌 *Space Horoscope — {today.strftime('%d %b %Y')}*\n\n"
+          f"{moon_emoji} *Moon:* {moon_illum}% | Day {moon_day}/30\n"
+          f"⚡ *Kp-index:* {kp:.1f}  |  {energy}\n\n"
+          f"♾ *Your sign today:* {sign}\n"
+          f"✨ _{advice}_\n\n"
+          f"{'🌠 High Kp: Aurora possible tonight!' if kp>=4 else ''}")
+    await safe_edit(q,text.strip(),reply_markup=back_kb(lang,"daily_horoscope",ctx))
+# ── End: DAILY HOROSCOPE ──────────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: DAILY CHALLENGE CONV HANDLER                                            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def daily_challenge_start(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    q_idx=date.today().toordinal()%len(CHALLENGE_DATA)
+    ctx.user_data["challenge_q"]=q_idx; ctx.user_data["challenge_answered"]=False
+    chall=CHALLENGE_DATA[q_idx]
+    await safe_edit(q,"⏳ Loading challenge image...")
+    await del_msg(q)
+    try:
+        img=nasa_image_search(chall["img_q"],1)
+        caption=f"🎯 *Daily Challenge*\n\n❓ *What is this object?*"
+        await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img,caption=caption,
+            parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
+    except:
+        await ctx.bot.send_message(chat_id=q.message.chat_id,
+            text=f"🎯 *Daily Challenge*\n\n❓ *What is this object?*",
+            parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
+
+async def challenge_answer_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    parts=q.data.split("_"); q_idx=int(parts[2]); ans=int(parts[3])
+    chall=CHALLENGE_DATA[q_idx]; correct=chall["answer"]; is_right=(ans==correct)
+    update_stats(q.message.chat_id,"challenge",1)
+    if is_right: update_stats(q.message.chat_id,"sections",1)
+    result="✅ Correct!" if is_right else f"❌ Wrong! Answer: *{chall['options'][correct]}*"
+    text=f"🎯 *Challenge Result*\n\n{result}\n\n💡 _{chall['fact']}_"
+    await safe_edit(q,text,reply_markup=challenge_kb(lang,q_idx,answered=True))
+# ── End: DAILY CHALLENGE ──────────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: ROCKET LANDING GAME CONV HANDLER (Falcon 9)                            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+ROCKET_STEPS=[
+    {"alt":70,"vel":1800,"fuel":42,"desc":"Stage separation complete. Reentry burn starting.",
+     "choices":{"A":("Initiate reentry burn",True),"B":("Skip burn to save fuel",False),"C":("Abort — return to orbit",False)},
+     "hint":"You need the reentry burn to reduce speed before atmosphere."},
+    {"alt":30,"vel":800,"fuel":28,"desc":"Atmospheric reentry. Grid fins deployed.",
+     "choices":{"A":("Deploy grid fins early",True),"B":("Hold grid fins",False),"C":("Increase throttle",False)},
+     "hint":"Grid fins help steer and slow the rocket in the atmosphere."},
+    {"alt":5,"vel":250,"fuel":15,"desc":"Final approach. Landing site confirmed. 5km altitude.",
+     "choices":{"A":("Initiate boostback burn",False),"B":("Deploy landing legs + ignite engine",True),"C":("Cut engine",False)},
+     "hint":"You need landing legs and engine to cushion the touchdown."},
+    {"alt":0.01,"vel":5,"fuel":3,"desc":"10 meters. Touchdown in 3 seconds.",
+     "choices":{"A":("Full throttle",False),"B":("Cut engine",False),"C":("Hover and settle",True)},
+     "hint":"Gentle hover lets legs absorb the last meters safely."},
+]
+
+async def rocket_game_start(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    ctx.user_data["rocket_step"]=0; ctx.user_data["rocket_alive"]=True
+    await _show_rocket_step(q,ctx,0)
+    return ROCKET_STEP
+
+async def _show_rocket_step(q,ctx,step_idx):
+    s=ROCKET_STEPS[step_idx]; lang=get_lang(ctx)
+    text=(f"🚀 *Falcon 9 Landing Simulator*\n"
+          f"━━ Step {step_idx+1}/{len(ROCKET_STEPS)} ━━\n\n"
+          f"📍 Alt: *{s['alt']} km*  |  💨 Speed: *{s['vel']} m/s*  |  ⛽ Fuel: *{s['fuel']}%*\n\n"
+          f"_{s['desc']}_\n\n"
+          f"*What do you do?*")
+    rows=[[InlineKeyboardButton(f"{k}. {v[0]}",callback_data=f"rocket_choice_{step_idx}_{k}")] for k,v in s["choices"].items()]
+    rows.append([InlineKeyboardButton("❌ Abort mission",callback_data="back")])
+    await safe_edit(q,text,reply_markup=InlineKeyboardMarkup(rows))
+
+async def rocket_choice_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    parts=q.data.split("_"); step_idx=int(parts[2]); choice=parts[3]
+    s=ROCKET_STEPS[step_idx]; is_correct=s["choices"][choice][1]
+    if not is_correct:
+        text=(f"💥 *BOOOM!*\n\n"
+              f"❌ Wrong call at step {step_idx+1}.\n"
+              f"💡 _{s['hint']}_\n\n"
+              f"The Falcon 9 crashed into the drone ship. Try again!\n🔧 SpaceX calls this a 'rapid unscheduled disassembly'.")
+        kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔄 Try again",callback_data="rocket_game"),InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+        await safe_edit(q,text,reply_markup=kb)
+        return ConversationHandler.END
+    next_step=step_idx+1
+    if next_step>=len(ROCKET_STEPS):
+        text=("🎉 *TOUCHDOWN! PERFECT LANDING!*\n\n"
+              "✅ Falcon 9 successfully landed on the drone ship!\n"
+              "⛽ Fuel remaining: 3%  |  Speed at touchdown: 2 m/s\n\n"
+              "🏅 You've mastered the Falcon 9 landing algorithm.\n"
+              "_SpaceX does this routinely since 2015!_")
+        update_stats(q.message.chat_id,"sections",1)
+        kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔄 Play again",callback_data="rocket_game"),InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+        await safe_edit(q,text,reply_markup=kb)
+        return ConversationHandler.END
+    ctx.user_data["rocket_step"]=next_step
+    text=f"✅ *Good call!*\n_{s['hint']}_\n\n➡️ Next step..."
+    await safe_edit(q,text)
+    await _show_rocket_step(q,ctx,next_step)
+    return ROCKET_STEP
+# ── End: ROCKET LANDING GAME ──────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: CLAUDE API Q&A CONV HANDLER                                             ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def qa_start(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    ctx.user_data["qa_lang"]=lang
+    await del_msg(q)
+    prompt={"ru":"💬 Задай любой вопрос о космосе — отвечу с точностью астронома!",
+            "en":"💬 Ask me anything about space — I'll answer with an astronomer's precision!",
+            "he":"💬 שאל אותי כל שאלה על החלל!",
+            "ar":"💬 اسألني أي شيء عن الفضاء!"}
+    await ctx.bot.send_message(chat_id=q.message.chat_id,text=prompt.get(lang,prompt["en"]),
+        parse_mode="Markdown")
+    return QA_QUESTION
+
+async def qa_answer(update, ctx):
+    lang=ctx.user_data.get("qa_lang","en")
+    question=update.message.text.strip()
+    if len(question)<3 or len(question)>500:
+        await update.message.reply_text("❌ 3–500 chars"); return QA_QUESTION
+    thinking=await update.message.reply_text("🤔 Thinking...")
+    if not ANTHROPIC_API_KEY:
+        await thinking.edit_text("❌ Claude API key not configured. Add ANTHROPIC_API_KEY to env.")
+        return ConversationHandler.END
+    try:
+        sys_prompt=f"You are an expert astronomer and space scientist. Answer in {lang} language. Be concise (max 300 words), accurate, and engaging. Use emojis sparingly. End with one fascinating related fact."
+        resp=requests.post("https://api.anthropic.com/v1/messages",
+            headers={"x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","content-type":"application/json"},
+            json={"model":CLAUDE_MODEL,"max_tokens":512,"system":sys_prompt,
+                  "messages":[{"role":"user","content":question}]},timeout=30)
+        answer=resp.json()["content"][0]["text"]
+    except Exception as e:
+        answer=f"❌ Error: {e}"
+    update_stats(update.effective_chat.id,"sections",1)
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton("❓ Ask another",callback_data="space_qa"),InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+    await thinking.edit_text(f"🔭 *Q: {question[:60]}...*\n\n{answer}"[:4096],
+        parse_mode="Markdown",reply_markup=kb)
+    return ConversationHandler.END
+
+async def qa_cancel(update, ctx):
+    await update.message.reply_text("Cancelled."); return ConversationHandler.END
+# ── End: CLAUDE API Q&A ───────────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: FAVORITES HANDLERS                                                      ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def favorites_save_h(update, ctx):
+    """Called when user taps ⭐ Save on APOD. Data passed via ctx.user_data."""
+    q=update.callback_query; await safe_answer(q,"⭐ Saved!",show_alert=False); lang=get_lang(ctx)
+    apod_data=ctx.user_data.get("last_apod",{})
+    if not apod_data: return
+    cid=str(q.message.chat_id); favs=load_favorites()
+    if cid not in favs: favs[cid]=[]
+    if len(favs[cid])>=50:
+        await safe_answer(q,"❌ Max 50 favorites",show_alert=True); return
+    entry={"date":apod_data.get("date",date.today().isoformat()),"title":apod_data.get("title","APOD"),"url":apod_data.get("url",""),"hdurl":apod_data.get("hdurl","")}
+    if not any(f["date"]==entry["date"] for f in favs[cid]):
+        favs[cid].insert(0,entry); save_favorites(favs)
+        update_stats(q.message.chat_id,"favorites",1)
+
+async def favorites_view_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    cid=str(q.message.chat_id); favs=load_favorites(); my_favs=favs.get(cid,[])
+    if not my_favs:
+        await safe_edit(q,"⭐ *Favorites*\n\nNo saved photos yet.\nTap ⭐ on any APOD to save it!",
+            reply_markup=back_kb(lang,ctx=ctx)); return
+    lines=["⭐ *Your Favorites*\n"]
+    for i,f in enumerate(my_favs[:15]):
+        link=f"[{f['title'][:35]}]({f.get('hdurl') or f.get('url','')})"
+        lines.append(f"{i+1}. {link} _{f['date']}_")
+    lines.append(f"\n_Total: {len(my_favs)} photos_")
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🗑 Clear all",callback_data="favorites_clear"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
+    await safe_edit(q,"\n".join(lines)[:4096],reply_markup=kb,disable_web_page_preview=True)
+
+async def favorites_clear_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    cid=str(q.message.chat_id); favs=load_favorites()
+    favs[cid]=[]; save_favorites(favs)
+    await safe_edit(q,"🗑 Favorites cleared.",reply_markup=back_kb(lang,ctx=ctx))
+# ── End: FAVORITES HANDLERS ───────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: SMART ALERTS CONV HANDLER                                               ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def smart_alerts_menu_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    cid=str(q.message.chat_id); alerts=load_smart_alerts(); my=alerts.get(cid,{})
+    kp_t=my.get("kp_threshold",7); ld_t=my.get("asteroid_ld",2); eq_t=my.get("earthquake_min",6)
+    text=(f"🔔 *Smart Alerts Settings*\n\n"
+          f"⚡ Kp alert when ≥ *{kp_t}* (aurora visible)\n"
+          f"☄️ Asteroid alert when < *{ld_t}* LD\n"
+          f"🌍 Earthquake alert when M ≥ *{eq_t}*\n\n"
+          f"_Tap to change a threshold:_")
+    kb=InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"⚡ Kp ≥ {kp_t} (change)",callback_data="smart_set_kp")],
+        [InlineKeyboardButton(f"☄️ Asteroid < {ld_t} LD (change)",callback_data="smart_set_ld")],
+        [InlineKeyboardButton(f"🌍 Earthquake M ≥ {eq_t} (change)",callback_data="smart_set_eq")],
+        [InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")],
+    ])
+    await safe_edit(q,text,reply_markup=kb)
+
+async def smart_set_kp_start(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    ctx.user_data["smart_lang"]=lang
+    await del_msg(q)
+    await ctx.bot.send_message(q.message.chat_id,"⚡ Send Kp threshold (1–9, e.g. *5* for moderate aurora):",parse_mode="Markdown")
+    return SMART_KP
+
+async def smart_kp_received(update, ctx):
+    lang=ctx.user_data.get("smart_lang","en")
+    try:
+        val=int(update.message.text.strip())
+        if not 1<=val<=9: raise ValueError
+    except:
+        await update.message.reply_text("❌ Enter 1–9"); return SMART_KP
+    cid=str(update.effective_chat.id); alerts=load_smart_alerts()
+    if cid not in alerts: alerts[cid]={}
+    alerts[cid]["kp_threshold"]=val; save_smart_alerts(alerts)
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔔 Back to alerts",callback_data="smart_alerts_menu")]])
+    await update.message.reply_text(f"✅ Kp alert set to ≥ *{val}*",parse_mode="Markdown",reply_markup=kb)
+    return ConversationHandler.END
+
+async def smart_set_ld_start(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    ctx.user_data["smart_lang"]=lang
+    await del_msg(q)
+    await ctx.bot.send_message(q.message.chat_id,"☄️ Send asteroid LD threshold (1–10, e.g. *2* = within 2 lunar distances):",parse_mode="Markdown")
+    return SMART_LD
+
+async def smart_ld_received(update, ctx):
+    lang=ctx.user_data.get("smart_lang","en")
+    try:
+        val=float(update.message.text.strip().replace(",","."))
+        if not 0.5<=val<=20: raise ValueError
+    except:
+        await update.message.reply_text("❌ Enter 0.5–20"); return SMART_LD
+    cid=str(update.effective_chat.id); alerts=load_smart_alerts()
+    if cid not in alerts: alerts[cid]={}
+    alerts[cid]["asteroid_ld"]=val; save_smart_alerts(alerts)
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔔 Back to alerts",callback_data="smart_alerts_menu")]])
+    await update.message.reply_text(f"✅ Asteroid alert set to < *{val} LD*",parse_mode="Markdown",reply_markup=kb)
+    return ConversationHandler.END
+
+async def smart_set_eq_start(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    ctx.user_data["smart_lang"]=lang
+    await del_msg(q)
+    await ctx.bot.send_message(q.message.chat_id,"🌍 Send earthquake M threshold (4–9, e.g. *6*):",parse_mode="Markdown")
+    return SMART_KP  # reuse same state
+
+async def smart_eq_received(update, ctx):
+    lang=ctx.user_data.get("smart_lang","en")
+    try:
+        val=float(update.message.text.strip()); assert 4<=val<=9
+    except:
+        await update.message.reply_text("❌ Enter 4–9"); return SMART_KP
+    cid=str(update.effective_chat.id); alerts=load_smart_alerts()
+    if cid not in alerts: alerts[cid]={}
+    alerts[cid]["earthquake_min"]=val; save_smart_alerts(alerts)
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔔 Back",callback_data="smart_alerts_menu")]])
+    await update.message.reply_text(f"✅ Earthquake alert set to M ≥ *{val}*",parse_mode="Markdown",reply_markup=kb)
+    return ConversationHandler.END
+
+async def smart_cancel(update, ctx):
+    await update.message.reply_text("Cancelled."); return ConversationHandler.END
+
+async def job_smart_alerts_check(context):
+    """Hourly: check live Kp + asteroids against user thresholds."""
+    alerts=load_smart_alerts()
+    if not alerts: return
+    # Get Kp
+    try:
+        r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=10)
+        kp=float(r.json()[-1].get("kp_index",0))
+    except: kp=0
+    # Get asteroid
+    today=date.today().isoformat()
+    neo_danger=[]
+    try:
+        data=nasa_req("/neo/rest/v1/feed",{"start_date":today,"end_date":today})
+        neos=data["near_earth_objects"].get(today,[])
+        for a in neos:
+            ap=a["close_approach_data"][0] if a["close_approach_data"] else {}
+            ld_dist=float(ap.get("miss_distance",{}).get("lunar","999"))
+            neo_danger.append({"name":a["name"],"ld":ld_dist})
+    except: pass
+    for cid,prefs in alerts.items():
+        try:
+            cid_int=int(cid)
+            # Kp alert
+            kp_thresh=prefs.get("kp_threshold",7)
+            if kp>=kp_thresh:
+                try: await context.bot.send_message(cid_int,f"⚡ *Smart Alert: Kp {kp:.1f}!*\nThreshold {kp_thresh} reached — aurora may be visible!",parse_mode="Markdown")
+                except: pass
+            # Asteroid alert
+            ld_thresh=prefs.get("asteroid_ld",2)
+            for neo in neo_danger:
+                if neo["ld"]<=ld_thresh:
+                    try: await context.bot.send_message(cid_int,f"☄️ *Smart Alert: Close Asteroid!*\n{neo['name']} at {neo['ld']:.2f} LD (threshold {ld_thresh})",parse_mode="Markdown")
+                    except: pass
+        except: continue
+# ── End: SMART ALERTS ─────────────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: MY STATS HANDLER                                                        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def my_stats_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    cid=str(q.message.chat_id); stats=load_stats(); s=stats.get(cid,{})
+    ach=load_achievements(); earned=len(ach.get(cid,{}).get("earned",[]))
+    favs=load_favorites(); fav_count=len(favs.get(cid,[]))
+    text=(f"📊 *My Space Stats*\n\n"
+          f"📸 APOD viewed: *{s.get('apod',0)}*\n"
+          f"🧠 Quizzes taken: *{s.get('quiz',0)}*\n"
+          f"🏆 Perfect quizzes: *{s.get('quiz_perfect',0)}*\n"
+          f"🎯 Challenges done: *{s.get('challenge',0)}*\n"
+          f"⭐ Favorites saved: *{fav_count}*\n"
+          f"🏅 Achievements: *{earned}/{len(ACHIEVEMENTS_DEF)}*\n"
+          f"🔥 Current streak: *{s.get('streak',0)} days*\n"
+          f"📅 Active since: *{min(s.get('days',[date.today().isoformat()]))[:10]}*")
+    await safe_edit(q,text,reply_markup=back_kb(lang,"cat_interact",ctx))
+# ── End: MY STATS HANDLER ─────────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: ISS VISIBILITY SCHEDULE CONV HANDLER                                   ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+# Major cities lookup (lat, lon)
+CITY_COORDS = {
+    "moscow":("Moscow 🇷🇺",55.7558,37.6173),"london":("London 🇬🇧",51.5074,-0.1278),
+    "new york":("New York 🇺🇸",40.7128,-74.0060),"tel aviv":("Tel Aviv 🇮🇱",32.0853,34.7818),
+    "dubai":("Dubai 🇦🇪",25.2048,55.2708),"tokyo":("Tokyo 🇯🇵",35.6762,139.6503),
+    "paris":("Paris 🇫🇷",48.8566,2.3522),"berlin":("Berlin 🇩🇪",52.5200,13.4050),
+    "kyiv":("Kyiv 🇺🇦",50.4501,30.5234),"istanbul":("Istanbul 🇹🇷",41.0082,28.9784),
+    "beijing":("Beijing 🇨🇳",39.9042,116.4074),"sydney":("Sydney 🇦🇺",-33.8688,151.2093),
+    "rio":("Rio de Janeiro 🇧🇷",-22.9068,-43.1729),"toronto":("Toronto 🇨🇦",43.6532,-79.3832),
+    "cairo":("Cairo 🇪🇬",30.0444,31.2357),"singapore":("Singapore 🇸🇬",1.3521,103.8198),
+}
+
+async def iss_schedule_start(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    ctx.user_data["iss_sched_lang"]=lang
+    await del_msg(q)
+    cities=", ".join(k.title() for k in list(CITY_COORDS.keys())[:8])+"..."
+    await ctx.bot.send_message(q.message.chat_id,
+        f"🌠 *ISS Visibility Schedule*\n\nEnter your city name:\n_Examples: {cities}_",
+        parse_mode="Markdown")
+    return ISS_CITY
+
+async def iss_city_received(update, ctx):
+    lang=ctx.user_data.get("iss_sched_lang","en")
+    city_input=update.message.text.strip().lower()
+    # Find city
+    match=None
+    for k,(name,lat,lon) in CITY_COORDS.items():
+        if k in city_input or city_input in k:
+            match=(name,lat,lon); break
+    if not match:
+        # Try geocoding via Nominatim
+        try:
+            r=requests.get(f"https://nominatim.openstreetmap.org/search?q={city_input}&format=json&limit=1",
+                headers={"User-Agent":"NASASpaceBot/2.0"},timeout=8)
+            res=r.json()
+            if res:
+                lat=float(res[0]["lat"]); lon=float(res[0]["lon"])
+                city_name=res[0].get("display_name","").split(",")[0]
+                match=(city_name,lat,lon)
+        except: pass
+    if not match:
+        await update.message.reply_text("❌ City not found. Try: Moscow, London, Tokyo, Tel Aviv, Dubai...")
+        return ISS_CITY
+    city_name,lat,lon=match
+    # Get ISS passes from Open Notify
+    passes=[]
+    try:
+        r=requests.get(f"http://api.open-notify.org/iss-pass.json?lat={lat}&lon={lon}&n=5",timeout=10)
+        if r.status_code==200:
+            for p in r.json().get("response",[]):
+                rise_ts=p.get("risetime",0); dur=p.get("duration",0)
+                rise_dt=datetime.fromtimestamp(rise_ts).strftime("%d.%m %H:%M")
+                dur_min=f"{dur//60}m{dur%60:02d}s"
+                passes.append(f"🛸 *{rise_dt}*  |  Duration: {dur_min}")
+    except: pass
+    if not passes:
+        # Fallback: calculate from current position
+        try:
+            pos=get_iss_position()
+            text=(f"🌠 *ISS over {city_name}*\n\n"
+                  f"⚠️ Pass prediction API unavailable.\n\n"
+                  f"📍 ISS current position:\n"
+                  f"   Lat: {pos['lat']:+.2f}°  |  Lon: {pos['lon']:+.2f}°\n"
+                  f"   Altitude: ~408 km\n\n"
+                  f"🔄 ISS completes one orbit every ~92 min.\n"
+                  f"For precise times: [Heavens Above](https://www.heavens-above.com/PassSummary.aspx?lat={lat}&lng={lon})")
+        except: text=f"🌠 *ISS visibility for {city_name}*\n\nUse [Heavens Above](https://heavens-above.com) for precise passes."
+    else:
+        text=(f"🌠 *ISS over {city_name}*\n📍 {lat:+.2f}°, {lon:+.2f}°\n\n"
+              f"⬆️ *Upcoming passes:*\n\n"+"\n".join(passes)+
+              f"\n\n_Times are local UTC. ISS moves at 28,000 km/h._")
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+    await update.message.reply_text(text[:4096],parse_mode="Markdown",reply_markup=kb,disable_web_page_preview=True)
+    return ConversationHandler.END
+
+async def iss_city_cancel(update, ctx):
+    await update.message.reply_text("Cancelled."); return ConversationHandler.END
+# ── End: ISS VISIBILITY ───────────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: METEORITE MAP HANDLER                                                   ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def meteorite_map_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🗺 Loading...")
+    try:
+        r=requests.get("https://data.nasa.gov/resource/gh4g-9sfh.json?$limit=2000&$order=mass+DESC",timeout=15)
+        r.raise_for_status(); data=r.json()[:10]
+        lines=["🗺 *Top 10 Meteorites (NASA Database)*\n"]
+        for m in data:
+            name=m.get("name","?"); mass=m.get("mass","?")
+            year=str(m.get("year","?"))[:4]
+            rec=m.get("recclass","?")
+            try: mass_t=f"{float(mass)/1000:,.1f} kg"
+            except: mass_t=f"{mass} g"
+            geo=m.get("geolocation",{})
+            lat=geo.get("latitude","?"); lon=geo.get("longitude","?")
+            try: map_link=f"[📍]( https://www.google.com/maps?q={lat},{lon})"
+            except: map_link=""
+            lines.append(f"☄️ *{name}* ({year}) — {mass_t} — {rec} {map_link}")
+        text="\n".join(lines)+"\n\n[🔗 Full NASA Database](https://data.nasa.gov/resource/gh4g-9sfh.json)"
+    except Exception as e:
+        text=("🗺 *Famous Meteorites*\n\n"
+              "☄️ *Hoba* (Namibia, 1920) — 60 tons — largest ever found\n"
+              "☄️ *Chelyabinsk* (Russia, 2013) — 13,000 tons — injured 1,600 people\n"
+              "☄️ *Allende* (Mexico, 1969) — 2 tons — oldest material in solar system\n"
+              "☄️ *ALH84001* (Antarctica) — Martian meteorite with possible microfossils\n"
+              "☄️ *Willamette* (USA) — 15.5 tons — largest in North America\n\n"
+              "[🔗 NASA Meteorite Database](https://data.nasa.gov/resource/gh4g-9sfh.json)")
+    await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"meteorite_map",ctx),disable_web_page_preview=True)
+# ── End: METEORITE MAP ────────────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: FLIGHT CALCULATOR HANDLER                                               ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def flight_calculator_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    await safe_edit(q,"🧮 *Flight Calculator*\n\nChoose your destination:",reply_markup=flight_target_kb(lang))
+
+async def flight_target_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    target_key=q.data.replace("flight_target_","")
+    target=FLIGHT_TARGETS.get(target_key)
+    if not target: return
+    ctx.user_data["flight_target"]=target_key
+    await safe_edit(q,f"🚀 To *{target['name']}* ({target['desc']})\n\nChoose your spacecraft speed:",
+        reply_markup=flight_speed_kb(lang,target_key))
+
+async def flight_calc_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    parts=q.data.split("_"); speed_key=parts[-1]
+    target_key="_".join(parts[2:-1]) if len(parts)>3 else parts[2]
+    target=FLIGHT_TARGETS.get(target_key); speed=FLIGHT_SPEEDS.get(speed_key)
+    if not target or not speed: return
+    dist_km=target["km"]; kmh=speed["kmh"]
+    hours=dist_km/kmh; days=hours/24; years=days/365.25
+    if years>=1e6:     time_str=f"{years/1e6:.2f} million years"
+    elif years>=1000:  time_str=f"{years:,.0f} years"
+    elif years>=1:     time_str=f"{years:.1f} years"
+    elif days>=1:      time_str=f"{days:.1f} days"
+    else:              time_str=f"{hours:.1f} hours"
+    # Fun context
+    context_lines=[]
+    if years>4 and speed_key!="light": context_lines.append("_Your great-great-grandchildren would arrive._")
+    if speed_key=="light" and target_key=="andromeda": context_lines.append("_At lightspeed — still 2.5 million years!_")
+    if speed_key=="car" and target_key!="moon": context_lines.append("_You'd need fuel worth more than the GDP of Earth._")
+    text=(f"🧮 *Flight Calculator Result*\n\n"
+          f"📍 From: Earth  →  {target['name']}\n"
+          f"📏 Distance: {dist_km:,.0f} km\n"
+          f"⚡ Speed: {speed['name']} ({kmh:,.0f} km/h)\n\n"
+          f"🕐 Travel time: *{time_str}*\n\n"
+          f"{chr(10).join(context_lines)}")
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔄 Calculate another",callback_data="flight_calculator"),InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+    await safe_edit(q,text.strip(),reply_markup=kb)
+# ── End: FLIGHT CALCULATOR ────────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: MISSION STATUS HANDLER                                                  ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def mission_status_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    await safe_edit(q,"📡 *Active Space Missions*\nSelect to learn more:",reply_markup=missions_kb(lang))
+
+async def mission_detail_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    idx=int(q.data.replace("mission_",""))
+    m=MISSIONS_DATA[idx]
+    bar_len=20; filled=int(m["progress"]/100*bar_len)
+    bar="█"*filled+"░"*(bar_len-filled)
+    text=(f"{m['name']}\n"
+          f"🏢 {m['agency']}  |  🛰 {m['type']}\n"
+          f"🚀 Launch: {m['launched']}\n"
+          f"📍 Location: {m['orbit']}\n"
+          f"{m['status']}\n"
+          f"[{bar}] {m['progress']}%\n\n"
+          f"_{m['desc']}_\n\n"
+          f"[🔗 Learn more]({m['url']})")
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton("◀️ All missions",callback_data="mission_status"),InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+    await safe_edit(q,text[:4096],reply_markup=kb,disable_web_page_preview=True)
+# ── End: MISSION STATUS HANDLER ───────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: SPACE DICTIONARY HANDLER                                                ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def space_dictionary_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    await safe_edit(q,"📚 *Space Dictionary*\n\nChoose a term:",reply_markup=dict_kb(lang))
+
+async def dict_term_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    term_key=q.data.replace("dict_","")
+    entry=SPACE_DICT.get(term_key)
+    if not entry: return
+    data=entry.get(lang, entry.get("en"))
+    title,text,fact=data
+    full_text=(f"{entry['emoji']} *{title}*\n\n{text}\n\n💡 *Fun fact:* _{fact}_")
+    await safe_edit(q,full_text,reply_markup=back_kb(lang,"space_dictionary",ctx))
+# ── End: SPACE DICTIONARY ─────────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: 30-DAY COURSE                                                           ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def course_menu_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    await safe_edit(q,"🎓 *Astronomy in 30 Days*\n\nA daily lesson delivered to your inbox — from the Solar System to the cosmic web.",reply_markup=course_kb(lang))
+
+async def course_subscribe_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    cid=str(q.message.chat_id); cp=load_course()
+    if cid in cp:
+        day=cp[cid].get("day",1)
+        await safe_edit(q,f"🎓 Already subscribed! You're on Day *{day}/30*.\nNext lesson comes daily at 10:00.",
+            reply_markup=back_kb(lang,"course_menu",ctx)); return
+    cp[cid]={"day":1,"subscribed":date.today().isoformat(),"lang":lang}
+    save_course(cp)
+    # Send first lesson immediately
+    lesson=COURSE_LESSONS[0]
+    await safe_edit(q,f"✅ *Subscribed to 30-Day Astronomy Course!*\n\nHere's your first lesson:\n\n{lesson['title']}\n\n{lesson['text']}",
+        reply_markup=back_kb(lang,"course_menu",ctx))
+
+async def course_browse_h(update, ctx):
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    lines=["📚 *All 30 Lessons*\n"]
+    for l in COURSE_LESSONS: lines.append(f"Day {l['day']:02d}. {l['title']}")
+    await safe_edit(q,"\n".join(lines)[:4096],reply_markup=back_kb(lang,"course_menu",ctx))
+
+async def job_course_lesson(context):
+    cp=load_course()
+    if not cp: return
+    updated=False
+    for cid,data in cp.items():
+        day=data.get("day",1)
+        if day>30: continue
+        lesson=COURSE_LESSONS[day-1]
+        lang=data.get("lang","en")
+        text=f"🎓 *Day {day}/30 — Astronomy Course*\n\n{lesson['title']}\n\n{lesson['text']}"
+        try:
+            await context.bot.send_message(int(cid),text[:4096],parse_mode="Markdown")
+            cp[cid]["day"]=day+1; updated=True
+        except Exception as e: logger.warning(f"Course {cid}: {e}")
+    if updated: save_course(cp)
+
+async def job_earth_fact(context):
+    """Daily Earth-from-space fact with EPIC image."""
+    subs=load_subscribers(); chat_ids=subs.get("earth_fact",[])
+    if not chat_ids: return
+    try:
+        data=nasa_req("/EPIC/api/natural")
+        if data:
+            item=data[0]; date_str=item.get("date","")[:10].replace("-","/")
+            img_name=item.get("image",""); url=f"https://epic.gsfc.nasa.gov/archive/natural/{date_str}/png/{img_name}.png"
+            facts=["Earth looks like a blue marble from space — because oceans cover 71% of its surface.",
+                   "From space, Earth is the only planet with clearly visible weather systems.",
+                   "The Amazon rainforest is visible from space as a massive green swath.",
+                   "City lights at night reveal human civilization's footprint from orbit.",
+                   "The Sahara Desert is almost as large as the continental United States."]
+            fact=facts[date.today().toordinal()%len(facts)]
+            caption=f"🌍 *Earth Fact of the Day*\n\n_{fact}_\n\n📅 {date_str} UTC"
+            for cid in chat_ids:
+                try:
+                    await context.bot.send_photo(int(cid),url,caption=caption,parse_mode="Markdown")
+                except: await context.bot.send_message(int(cid),caption,parse_mode="Markdown")
+    except Exception as e: logger.error(f"job_earth_fact: {e}")
+# ── End: 30-DAY COURSE ────────────────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: NEW_DIRECT_MAP ADDITIONS                                                ║
+# Add this AFTER DIRECT_MAP = {...} in part2:                                   ║
+#   DIRECT_MAP.update(NEW_DIRECT_MAP)                                           ║
+#   CAT_MAP.update(NEW_CAT_MAP)                                                 ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+NEW_DIRECT_MAP = {
+    # Live & alerts
+    "satellite_tracker":   satellite_tracker_h,
+    "earthquakes":         earthquakes_h,
+    "spaceweather_digest": spaceweather_digest_h,
+    "exoplanet_alert":     exoplanet_alert_h,
+    # Interactive
+    "achievements":        achievements_h,
+    "daily_horoscope":     daily_horoscope_h,
+    "daily_challenge_start": daily_challenge_start,
+    # Profile
+    "favorites_view":      favorites_view_h,
+    "favorites_clear":     favorites_clear_h,
+    "my_stats":            my_stats_h,
+    "smart_alerts_menu":   smart_alerts_menu_h,
+    # Useful
+    "mission_status":      mission_status_h,
+    "meteorite_map":       meteorite_map_h,
+    "flight_calculator":   flight_calculator_h,
+    # Education
+    "space_dictionary":    space_dictionary_h,
+    "course_menu":         course_menu_h,
+    "course_subscribe":    course_subscribe_h,
+    "course_browse":       course_browse_h,
+}
+
+NEW_CAT_MAP = {
+    "cat_profile": (profile_kb, "title_profile"),
+}
+# ── End: NEW_DIRECT_MAP ADDITIONS ─────────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: CALLBACK ROUTER ADDITIONS                                               ║
+# These are extra patterns — add handling to callback_router() in part2:        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+async def route_new_callbacks(q, cb, ctx, lang):
+    """Returns True if this function handled the callback, False otherwise."""
+    if cb.startswith("sat_"):           await sat_detail_h(q._update_ref,ctx); return True
+    if cb.startswith("mission_"):       await mission_detail_h(q._update_ref,ctx); return True
+    if cb.startswith("flight_target_"): await flight_target_h(q._update_ref,ctx); return True
+    if cb.startswith("flight_calc_"):   await flight_calc_h(q._update_ref,ctx); return True
+    if cb.startswith("dict_"):          await dict_term_h(q._update_ref,ctx); return True
+    if cb.startswith("challenge_ans_"): await challenge_answer_h(q._update_ref,ctx); return True
+    if cb=="favorites_save":            await favorites_save_h(q._update_ref,ctx); return True
+    if cb=="smart_set_kp":              await smart_set_kp_start(q._update_ref,ctx); return True
+    if cb=="smart_set_ld":              await smart_set_ld_start(q._update_ref,ctx); return True
+    if cb=="smart_set_eq":              await smart_set_eq_start(q._update_ref,ctx); return True
+    if cb=="cat_profile":
+        await safe_answer(q); ctx.user_data["last_cat"]="cat_profile"
+        await safe_edit(q,tx(lang,"title_profile")+"\n\n"+tx(lang,"choose_sec"),reply_markup=profile_kb(lang)); return True
+    return False
+# ── End: CALLBACK ROUTER ADDITIONS ───────────────────────────────────────────
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# BLOCK: SETUP ADDITIONAL HANDLERS & JOBS                                        ║
+# Call get_new_conv_handlers() and register_new_jobs() from setup_bot() in part2║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+def get_new_conv_handlers():
+    qa_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(qa_start,pattern="^space_qa$")],
+        states={QA_QUESTION:[MessageHandler(filters.TEXT & ~filters.COMMAND,qa_answer)]},
+        fallbacks=[CommandHandler("cancel",qa_cancel)], allow_reentry=True,
+    )
+    iss_vis_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(iss_schedule_start,pattern="^iss_schedule$")],
+        states={ISS_CITY:[MessageHandler(filters.TEXT & ~filters.COMMAND,iss_city_received)]},
+        fallbacks=[CommandHandler("cancel",iss_city_cancel)], allow_reentry=True,
+    )
+    rocket_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(rocket_game_start,pattern="^rocket_game$")],
+        states={ROCKET_STEP:[CallbackQueryHandler(rocket_choice_h,pattern="^rocket_choice_")]},
+        fallbacks=[CallbackQueryHandler(back_h,pattern="^back$")], allow_reentry=True,
+    )
+    smart_kp_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(smart_set_kp_start,pattern="^smart_set_kp$")],
+        states={SMART_KP:[MessageHandler(filters.TEXT & ~filters.COMMAND,smart_kp_received)]},
+        fallbacks=[CommandHandler("cancel",smart_cancel)], allow_reentry=True,
+    )
+    smart_ld_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(smart_set_ld_start,pattern="^smart_set_ld$")],
+        states={SMART_LD:[MessageHandler(filters.TEXT & ~filters.COMMAND,smart_ld_received)]},
+        fallbacks=[CommandHandler("cancel",smart_cancel)], allow_reentry=True,
+    )
+    smart_eq_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(smart_set_eq_start,pattern="^smart_set_eq$")],
+        states={SMART_KP:[MessageHandler(filters.TEXT & ~filters.COMMAND,smart_eq_received)]},
+        fallbacks=[CommandHandler("cancel",smart_cancel)], allow_reentry=True,
+    )
+    return [qa_conv, iss_vis_conv, rocket_conv, smart_kp_conv, smart_ld_conv, smart_eq_conv]
+
+def register_new_jobs(jq):
+    from datetime import time as dtime
+    jq.run_daily(job_spaceweather_digest, time=dtime(8,30,0))
+    jq.run_daily(job_earth_fact,          time=dtime(9,15,0))
+    jq.run_daily(job_course_lesson,       time=dtime(10,0,0))
+    jq.run_daily(job_earthquake_alert,    time=dtime(8,0,0))
+    jq.run_repeating(job_exoplanet_alert,    interval=7*24*3600, first=600)
+    jq.run_repeating(job_smart_alerts_check, interval=3600,      first=300)
+# ── End: SETUP ADDITIONAL HANDLERS & JOBS ─────────────────────────────────────
 
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
