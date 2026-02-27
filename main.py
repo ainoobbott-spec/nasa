@@ -29,6 +29,16 @@ PORT           = int(os.environ.get("PORT", 10000))
 PLANET_DATE, PLANET_WEIGHT, PLANET_CHOICE = range(3)
 HOROSCOPE_BDAY = 10
 CAPSULE_MSG    = 20
+HOROSCOPE_BDAY = 10
+CAPSULE_MSG    = 20
+ISS_CITY      = 30
+DICT_TERM     = 31
+QA_QUESTION   = 32
+ROCKET_STEP   = 33
+SMART_KP      = 34
+SMART_LD      = 35
+CHALLENGE_ANS = 36
+COURSE_ENROLL = 37
 # ── End: CONVERSATION HANDLER STATES ──────────────────────────────────────────
 
 
@@ -424,6 +434,26 @@ T = {
     "news_empty":"📭 Новостей не найдено",
     "news_counter":"Новость {idx}/{total}",
     "btn_spacefact":"⭐ Факт о космосе", "btn_channels":"📢 Наши каналы", "btn_lang":"🌍 Язык",
+    "title_profile":    "👤 Мой профиль",
+    "btn_favorites":    "Избранное",
+    "btn_mystats":      "Статистика",
+    "btn_achievements": "Достижения",
+    "btn_smart_alerts": "Умные алерты",
+    "btn_iss_schedule": "🌠 МКС над городом",
+    "btn_meteorite_map":"🗺 Карта метеоритов",
+    "btn_flight_calc":  "🧮 Калькулятор полёта",
+    "btn_mission_status":"📡 Статус миссий",
+    "btn_dictionary":   "📚 Космический словарь",
+    "btn_course":       "🎓 Астрономия 30 дней",
+    "btn_earthquakes":  "🌍 Землетрясения",
+    "btn_sat_tracker":  "🛸 Трекер спутников",
+    "btn_sw_digest":    "☀️ Дайджест погоды",
+    "btn_exo_alert":    "🔭 Новые экзопланеты",
+    "btn_challenge":    "🎯 Челлендж",
+    "btn_rocket_game":  "👾 Посади ракету",
+    "btn_daily_horoscope":"🌌 Гороскоп сегодня",
+    "btn_space_qa":     "💬 Вопрос о космосе",
+    "btn_profile":      "👤 Профиль",
     "back_menu":"◀️ Главное меню", "back_cat":"◀️ Назад",
     "btn_refresh":"🔄 Обновить", "btn_more_rnd":"🎲 Ещё", "btn_another":"🔄 Ещё снимок", "btn_other_rv":"🔄 Другой",
     "title_photo":"📸 *Фото и галерея*", "title_solarsys":"🪐 *Солнечная система*",
@@ -523,6 +553,26 @@ T = {
     "news_empty":"📭 No articles found",
     "news_counter":"Article {idx}/{total}",
     "btn_spacefact":"⭐ Space Fact", "btn_channels":"📢 Our Channels", "btn_lang":"🌍 Language",
+    "title_profile":    "👤 My Profile",
+    "btn_favorites":    "Favorites",
+    "btn_mystats":      "My Stats",
+    "btn_achievements": "Achievements",
+    "btn_smart_alerts": "Smart Alerts",
+    "btn_iss_schedule": "🌠 ISS over my city",
+    "btn_meteorite_map":"🗺 Meteorite Map",
+    "btn_flight_calc":  "🧮 Flight Calculator",
+    "btn_mission_status":"📡 Mission Status",
+    "btn_dictionary":   "📚 Space Dictionary",
+    "btn_course":       "🎓 Astronomy 30 Days",
+    "btn_earthquakes":  "🌍 Earthquakes",
+    "btn_sat_tracker":  "🛸 Satellite Tracker",
+    "btn_sw_digest":    "☀️ Space Weather Digest",
+    "btn_exo_alert":    "🔭 New Exoplanets",
+    "btn_challenge":    "🎯 Daily Challenge",
+    "btn_rocket_game":  "👾 Land the Rocket",
+    "btn_daily_horoscope":"🌌 Today's Horoscope",
+    "btn_space_qa":     "💬 Ask about Space",
+    "btn_profile":      "👤 Profile",
     "back_menu":"◀️ Main Menu", "back_cat":"◀️ Back",
     "btn_refresh":"🔄 Refresh", "btn_more_rnd":"🎲 More", "btn_another":"🔄 Another", "btn_other_rv":"🔄 Other Rover",
     "title_photo":"📸 *Photo & Gallery*", "title_solarsys":"🪐 *Solar System*",
@@ -622,6 +672,26 @@ T = {
     "news_empty":"📭 לא נמצאו כתבות",
     "news_counter":"כתבה {idx}/{total}",
     "btn_spacefact":"⭐ עובדה", "btn_channels":"📢 ערוצים", "btn_lang":"🌍 שפה",
+    "title_profile":    "👤 הפרופיל שלי",
+    "btn_favorites":    "מועדפים",
+    "btn_mystats":      "הסטטיסטיקה שלי",
+    "btn_achievements": "הישגים",
+    "btn_smart_alerts": "התראות חכמות",
+    "btn_iss_schedule": "🌠 תחנת החלל מעל עירי",
+    "btn_meteorite_map":"🗺 מפת מטאוריטים",
+    "btn_flight_calc":  "🧮 מחשבון טיסה",
+    "btn_mission_status":"📡 סטטוס משימות",
+    "btn_dictionary":   "📚 מילון חלל",
+    "btn_course":       "🎓 אסטרונומיה 30 ימים",
+    "btn_earthquakes":  "🌍 רעידות אדמה",
+    "btn_sat_tracker":  "🛸 עוקב לוויינים",
+    "btn_sw_digest":    "☀️ תקציר מזג אוויר חלל",
+    "btn_exo_alert":    "🔭 כוכבי לכת חדשים",
+    "btn_challenge":    "🎯 אתגר יומי",
+    "btn_rocket_game":  "👾 נחות את הרקטה",
+    "btn_daily_horoscope":"🌌 הורוסקופ היום",
+    "btn_space_qa":     "💬 שאל על חלל",
+    "btn_profile":      "👤 פרופיל",
     "back_menu":"◀️ תפריט", "back_cat":"◀️ חזרה",
     "btn_refresh":"🔄 רענון", "btn_more_rnd":"🎲 עוד", "btn_another":"🔄 עוד", "btn_other_rv":"🔄 אחר",
     "title_photo":"📸 *תמונות*", "title_solarsys":"🪐 *מערכת השמש*",
@@ -706,6 +776,26 @@ T = {
     "news_empty":"📭 لا توجد مقالات",
     "news_counter":"مقالة {idx}/{total}",
     "btn_spacefact":"⭐ حقيقة", "btn_channels":"📢 قنواتنا", "btn_lang":"🌍 اللغة",
+   "title_profile":    "👤 ملفي الشخصي",
+    "btn_favorites":    "المفضلة",
+    "btn_mystats":      "إحصائياتي",
+    "btn_achievements": "الإنجازات",
+    "btn_smart_alerts": "تنبيهات ذكية",
+    "btn_iss_schedule": "🌠 محطة الفضاء فوق مدينتي",
+    "btn_meteorite_map":"🗺 خريطة النيازك",
+    "btn_flight_calc":  "🧮 حاسبة الرحلة",
+    "btn_mission_status":"📡 حالة المهمات",
+    "btn_dictionary":   "📚 قاموس الفضاء",
+    "btn_course":       "🎓 علم الفلك 30 يوماً",
+    "btn_earthquakes":  "🌍 الزلازل",
+    "btn_sat_tracker":  "🛸 متتبع الأقمار",
+    "btn_sw_digest":    "☀️ ملخص طقس الفضاء",
+    "btn_exo_alert":    "🔭 كواكب خارجية جديدة",
+    "btn_challenge":    "🎯 تحدي يومي",
+    "btn_rocket_game":  "👾 أهبط الصاروخ",
+    "btn_daily_horoscope":"🌌 برج اليوم",
+    "btn_space_qa":     "💬 اسأل عن الفضاء",
+    "btn_profile":      "👤 الملف الشخصي",
     "back_menu":"◀️ القائمة", "back_cat":"◀️ العودة",
     "btn_refresh":"🔄 تحديث", "btn_more_rnd":"🎲 المزيد", "btn_another":"🔄 أخرى", "btn_other_rv":"🔄 مركبة",
     "title_photo":"📸 *الصور*", "title_solarsys":"🪐 *المجموعة الشمسية*",
@@ -892,10 +982,11 @@ def main_menu_kb(lang):
         [InlineKeyboardButton(L("cat_earth"),        callback_data="cat_earth")],
         [InlineKeyboardButton(L("cat_science"),      callback_data="cat_science")],
         [InlineKeyboardButton(L("cat_live"),         callback_data="cat_live")],
-        [InlineKeyboardButton(L("cat_interact_btn"), callback_data="cat_interact")],
+         [InlineKeyboardButton(L("cat_interact_btn"), callback_data="cat_interact"),
+         InlineKeyboardButton(L("btn_profile"),      callback_data="cat_profile")],
         [InlineKeyboardButton(L("cat_news"),         callback_data="cat_news")],
         [InlineKeyboardButton(L("btn_spacefact"),    callback_data="spacefact"),
-         InlineKeyboardButton(L("btn_channels"),     callback_data="channels")],
+         InlineKeyboardButton(L("btn_channels"),     callback_data="channels")]
         [InlineKeyboardButton(L("btn_lang"),         callback_data="choose_lang")],
     ])
 
@@ -2696,6 +2787,8 @@ CAT_MAP = {
     "cat_interact":  (cat_interact_kb,  "title_interact"),
     "cat_news":      (cat_news_kb,      "title_news"),
 }
+DIRECT_MAP.update(NEW_DIRECT_MAP)
+CAT_MAP.update(NEW_CAT_MAP)
 # ── End: CALLBACK ROUTER — IMG_MAP, DIRECT_MAP, CAT_MAP ──────────────────────
 
 
@@ -2719,6 +2812,8 @@ async def callback_router(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await notif_toggle_h(update,ctx); return
     if cb.startswith("quiz_ans_"):
         await quiz_answer_h(update,ctx); return
+    if await route_new_callbacks(q, cb, ctx, lang):
+        return
     if cb in STATIC_TEXTS:
         await safe_answer(q)
         texts=STATIC_TEXTS[cb]; text=texts.get(lang,texts.get("en",""))
@@ -2814,13 +2909,15 @@ async def setup_bot():
 
     tg_app.add_handler(CommandHandler("start",start))
     tg_app.add_handler(CommandHandler("menu",menu_cmd))
-    tg_app.add_handler(planet_conv)
+   tg_app.add_handler(planet_conv)
     tg_app.add_handler(capsule_conv)
     tg_app.add_handler(horoscope_conv)
+    for h in get_new_conv_handlers():
+        tg_app.add_handler(h)
     tg_app.add_handler(CallbackQueryHandler(callback_router))
     tg_app.add_handler(MessageHandler(filters.ALL, unknown))
 
-    jq=tg_app.job_queue
+     jq=tg_app.job_queue
     if jq:
         from datetime import time as dtime
         jq.run_daily(job_asteroid_alert, time=dtime(9,0,0))
@@ -2828,6 +2925,7 @@ async def setup_bot():
         jq.run_daily(job_check_capsules, time=dtime(10,0,0))
         jq.run_repeating(job_space_weather_alert, interval=3600, first=60)
         jq.run_repeating(job_meteor_alert, interval=7*24*3600, first=120)
+        register_new_jobs(jq)
     else:
         logger.warning("job_queue not available — scheduled alerts disabled")
 
