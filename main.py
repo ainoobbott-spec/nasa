@@ -4228,15 +4228,14 @@ async def setup_bot():
 
 tg_app.add_handler(CommandHandler("start",start))
     tg_app.add_handler(CommandHandler("menu",menu_cmd))
-    tg_app.add_handler(planet_conv)     # ← 4 пробела (правильно!)
+    tg_app.add_handler(planet_conv)
     tg_app.add_handler(capsule_conv)
     tg_app.add_handler(horoscope_conv)
     for h in get_new_conv_handlers():
         tg_app.add_handler(h)
     tg_app.add_handler(CallbackQueryHandler(callback_router))
     tg_app.add_handler(MessageHandler(filters.ALL, unknown))
-
-     jq=tg_app.job_queue
+    jq=tg_app.job_queue
     if jq:
         from datetime import time as dtime
         jq.run_daily(job_asteroid_alert, time=dtime(9,0,0))
@@ -4272,6 +4271,7 @@ if __name__=="__main__":
     init_worker()
     flask_app.run(host="0.0.0.0",port=PORT)
 # ── End: BOT SETUP & STARTUP ──────────────────────────────────────────────────
+
 
 
 
