@@ -986,7 +986,7 @@ def main_menu_kb(lang):
          InlineKeyboardButton(L("btn_profile"),      callback_data="cat_profile")],
         [InlineKeyboardButton(L("cat_news"),         callback_data="cat_news")],
         [InlineKeyboardButton(L("btn_spacefact"),    callback_data="spacefact"),
-         InlineKeyboardButton(L("btn_channels"),     callback_data="channels")]
+         InlineKeyboardButton(L("btn_channels"),     callback_data="channels")],
         [InlineKeyboardButton(L("btn_lang"),         callback_data="choose_lang")],
     ])
 
@@ -4271,6 +4271,7 @@ if __name__=="__main__":
     init_worker()
     flask_app.run(host="0.0.0.0",port=PORT)
 # ── End: BOT SETUP & STARTUP ──────────────────────────────────────────────────
+
 
 
 
