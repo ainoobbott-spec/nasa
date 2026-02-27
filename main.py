@@ -986,7 +986,7 @@ def main_menu_kb(lang):
          InlineKeyboardButton(L("btn_profile"),      callback_data="cat_profile")],
         [InlineKeyboardButton(L("cat_news"),         callback_data="cat_news")],
         [InlineKeyboardButton(L("btn_spacefact"),    callback_data="spacefact"),
-         InlineKeyboardButton(L("btn_channels"),     callback_data="channels")],
+         InlineKeyboardButton(L("btn_channels"),     callback_data="channels")]
         [InlineKeyboardButton(L("btn_lang"),         callback_data="choose_lang")],
     ])
 
@@ -1134,6 +1134,10 @@ def cat_live_kb(lang):
         [InlineKeyboardButton(L("btn_sunspot"),     callback_data="live_sunspot"),
          InlineKeyboardButton(L("btn_live_epic"),   callback_data="live_epic_latest")],
         [InlineKeyboardButton(L("btn_sat_count"),   callback_data="live_satellite_count")],
+        [InlineKeyboardButton(L("btn_sat_tracker"),  callback_data="satellite_tracker"),
+         InlineKeyboardButton(L("btn_earthquakes"),  callback_data="earthquakes")],
+        [InlineKeyboardButton(L("btn_sw_digest"),    callback_data="spaceweather_digest"),
+         InlineKeyboardButton(L("btn_exo_alert"),    callback_data="exoplanet_alert")],
         [InlineKeyboardButton(L("back_menu"),       callback_data="back")],
     ])
 
@@ -1150,6 +1154,16 @@ def cat_interact_kb(lang):
         [InlineKeyboardButton(L("btn_mars_live"),     callback_data="mars_rover_live")],
         [InlineKeyboardButton(L("btn_notifications"), callback_data="notifications_menu")],
         [InlineKeyboardButton(L("btn_nasa_tv"),       callback_data="nasa_tv")],
+        [InlineKeyboardButton(L("btn_challenge"),      callback_data="daily_challenge_start"),
+         InlineKeyboardButton(L("btn_rocket_game"),    callback_data="rocket_game")],
+        [InlineKeyboardButton(L("btn_daily_horoscope"),callback_data="daily_horoscope"),
+         InlineKeyboardButton(L("btn_space_qa"),       callback_data="space_qa")],
+        [InlineKeyboardButton(L("btn_iss_schedule"),   callback_data="iss_schedule"),
+         InlineKeyboardButton(L("btn_meteorite_map"),  callback_data="meteorite_map")],
+        [InlineKeyboardButton(L("btn_flight_calc"),    callback_data="flight_calculator"),
+         InlineKeyboardButton(L("btn_mission_status"), callback_data="mission_status")],
+        [InlineKeyboardButton(L("btn_dictionary"),     callback_data="space_dictionary"),
+         InlineKeyboardButton(L("btn_course"),         callback_data="course_menu")],
         [InlineKeyboardButton(L("back_menu"),         callback_data="back")],
     ])
 
@@ -1494,7 +1508,20 @@ async def _send_apod(q, ctx, params=None):
         d       = data.get("date", "")
         copy_   = data.get("copyright", "NASA").strip().replace("\n", " ")
         caption = f"🌌 *{title}*\n📅 {d}  |  © {copy_}\n\n{expl}…\n\n[🔗 HD]({hdurl})"
-        kb = action_kb(lang, "apod_random", "btn_more_rnd", ctx) if not params else back_kb(lang, ctx=ctx)
+        # Build keyboard with ⭐ Save to favorites button
+        save_btn = InlineKeyboardButton("⭐ Сохранить / Save", callback_data="favorites_save")
+        if not params:
+            kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton(tx(lang, "btn_more_rnd"), callback_data="apod_random"), save_btn],
+                [InlineKeyboardButton(tx(lang, "back_menu"), callback_data="back")],
+            ])
+        else:
+            kb = InlineKeyboardMarkup([
+                [save_btn],
+                [InlineKeyboardButton(tx(lang, "back_menu"), callback_data="back")],
+            ])
+        # Save data for favorites handler
+        ctx.user_data["last_apod"] = {"title": title, "url": url, "hdurl": hdurl, "date": d}
         await del_msg(q)
         if mtype == "image":
             await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=url,
@@ -2787,6 +2814,8 @@ CAT_MAP = {
     "cat_interact":  (cat_interact_kb,  "title_interact"),
     "cat_news":      (cat_news_kb,      "title_news"),
 }
+DIRECT_MAP.update(NEW_DIRECT_MAP)
+CAT_MAP.update(NEW_CAT_MAP)
 # ── End: CALLBACK ROUTER — IMG_MAP, DIRECT_MAP, CAT_MAP ──────────────────────
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # PART 3 — 15 NEW FEATURES                                                      ║
@@ -2806,17 +2835,9 @@ CAT_MAP = {
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# BLOCK: NEW CONVERSATION STATE CONSTANTS                                        ║
-# (add these to CONVERSATION HANDLER STATES block in part1)                     ║
+# BLOCK: NEW CONVERSATION STATE CONSTANTS (defined at file top — no duplicate)  ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
-ISS_CITY      = 10
-DICT_TERM     = 11
-QA_QUESTION   = 12
-ROCKET_STEP   = 13
-SMART_KP      = 14
-SMART_LD      = 15
-CHALLENGE_ANS = 16
-COURSE_ENROLL = 17
+# ISS_CITY=30, DICT_TERM=31 etc. already defined above — skipping redefinition
 # ── End: NEW CONVERSATION STATE CONSTANTS ─────────────────────────────────────
 
 
@@ -3027,6 +3048,7 @@ def profile_kb(lang):
          InlineKeyboardButton("📊 "+L("btn_mystats"),     callback_data="my_stats")],
         [InlineKeyboardButton("🏆 "+L("btn_achievements"),callback_data="achievements"),
          InlineKeyboardButton("🔔 "+L("btn_smart_alerts"),callback_data="smart_alerts_menu")],
+        [InlineKeyboardButton(L("btn_iss_schedule"),       callback_data="iss_schedule")],
         [InlineKeyboardButton(L("back_menu"), callback_data="back")],
     ])
 
@@ -3389,26 +3411,17 @@ async def daily_challenge_start(update, ctx):
     q_idx=date.today().toordinal()%len(CHALLENGE_DATA)
     ctx.user_data["challenge_q"]=q_idx; ctx.user_data["challenge_answered"]=False
     chall=CHALLENGE_DATA[q_idx]
-    caption = f"🎯 *Daily Challenge*\n\n❓ *What is this object?*"
+    await safe_edit(q,"⏳ Loading challenge image...")
     await del_msg(q)
-    img_url = ""
     try:
-        ri = requests.get("https://images-api.nasa.gov/search",
-            params={"q": chall["img_q"], "media_type": "image", "page_size": 20}, timeout=12)
-        items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
-        if items:
-            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
+        img=nasa_image_search(chall["img_q"],1)
+        caption=f"🎯 *Daily Challenge*\n\n❓ *What is this object?*"
+        await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img,caption=caption,
+            parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
     except:
-        pass
-    if img_url:
-        try:
-            await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url, caption=caption,
-                parse_mode="Markdown", reply_markup=challenge_kb(lang, q_idx))
-            return
-        except:
-            pass
-    await ctx.bot.send_message(chat_id=q.message.chat_id, text=caption,
-        parse_mode="Markdown", reply_markup=challenge_kb(lang, q_idx))
+        await ctx.bot.send_message(chat_id=q.message.chat_id,
+            text=f"🎯 *Daily Challenge*\n\n❓ *What is this object?*",
+            parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
 
 async def challenge_answer_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -4024,9 +4037,6 @@ NEW_DIRECT_MAP = {
 NEW_CAT_MAP = {
     "cat_profile": (profile_kb, "title_profile"),
 }
-# Применяем расширения к роутеру
-DIRECT_MAP.update(NEW_DIRECT_MAP)
-CAT_MAP.update(NEW_CAT_MAP)
 # ── End: NEW_DIRECT_MAP ADDITIONS ─────────────────────────────────────────────
 
 
@@ -4034,19 +4044,18 @@ CAT_MAP.update(NEW_CAT_MAP)
 # BLOCK: CALLBACK ROUTER ADDITIONS                                               ║
 # These are extra patterns — add handling to callback_router() in part2:        ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
-async def route_new_callbacks(update, cb, ctx, lang):
-    q = update.callback_query
+async def route_new_callbacks(q, cb, ctx, lang):
     """Returns True if this function handled the callback, False otherwise."""
-    if cb.startswith("sat_"):           await sat_detail_h(update,ctx); return True
-    if cb.startswith("mission_"):       await mission_detail_h(update,ctx); return True
-    if cb.startswith("flight_target_"): await flight_target_h(update,ctx); return True
-    if cb.startswith("flight_calc_"):   await flight_calc_h(update,ctx); return True
-    if cb.startswith("dict_"):          await dict_term_h(update,ctx); return True
-    if cb.startswith("challenge_ans_"): await challenge_answer_h(update,ctx); return True
-    if cb=="favorites_save":            await favorites_save_h(update,ctx); return True
-    if cb=="smart_set_kp":              await smart_set_kp_start(update,ctx); return True
-    if cb=="smart_set_ld":              await smart_set_ld_start(update,ctx); return True
-    if cb=="smart_set_eq":              await smart_set_eq_start(update,ctx); return True
+    if cb.startswith("sat_"):           await sat_detail_h(q._update_ref,ctx); return True
+    if cb.startswith("mission_"):       await mission_detail_h(q._update_ref,ctx); return True
+    if cb.startswith("flight_target_"): await flight_target_h(q._update_ref,ctx); return True
+    if cb.startswith("flight_calc_"):   await flight_calc_h(q._update_ref,ctx); return True
+    if cb.startswith("dict_"):          await dict_term_h(q._update_ref,ctx); return True
+    if cb.startswith("challenge_ans_"): await challenge_answer_h(q._update_ref,ctx); return True
+    if cb=="favorites_save":            await favorites_save_h(q._update_ref,ctx); return True
+    if cb=="smart_set_kp":              await smart_set_kp_start(q._update_ref,ctx); return True
+    if cb=="smart_set_ld":              await smart_set_ld_start(q._update_ref,ctx); return True
+    if cb=="smart_set_eq":              await smart_set_eq_start(q._update_ref,ctx); return True
     if cb=="cat_profile":
         await safe_answer(q); ctx.user_data["last_cat"]="cat_profile"
         await safe_edit(q,tx(lang,"title_profile")+"\n\n"+tx(lang,"choose_sec"),reply_markup=profile_kb(lang)); return True
@@ -4122,7 +4131,7 @@ async def callback_router(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await notif_toggle_h(update,ctx); return
     if cb.startswith("quiz_ans_"):
         await quiz_answer_h(update,ctx); return
-    if await route_new_callbacks(update, cb, ctx, lang):
+    if await route_new_callbacks(q, cb, ctx, lang):
         return
     if cb in STATIC_TEXTS:
         await safe_answer(q)
@@ -4219,7 +4228,7 @@ async def setup_bot():
 
     tg_app.add_handler(CommandHandler("start",start))
     tg_app.add_handler(CommandHandler("menu",menu_cmd))
-    tg_app.add_handler(planet_conv)
+   tg_app.add_handler(planet_conv)
     tg_app.add_handler(capsule_conv)
     tg_app.add_handler(horoscope_conv)
     for h in get_new_conv_handlers():
@@ -4227,7 +4236,7 @@ async def setup_bot():
     tg_app.add_handler(CallbackQueryHandler(callback_router))
     tg_app.add_handler(MessageHandler(filters.ALL, unknown))
 
-    jq=tg_app.job_queue
+     jq=tg_app.job_queue
     if jq:
         from datetime import time as dtime
         jq.run_daily(job_asteroid_alert, time=dtime(9,0,0))
@@ -4263,4 +4272,3 @@ if __name__=="__main__":
     init_worker()
     flask_app.run(host="0.0.0.0",port=PORT)
 # ── End: BOT SETUP & STARTUP ──────────────────────────────────────────────────
-
