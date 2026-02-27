@@ -2814,8 +2814,6 @@ CAT_MAP = {
     "cat_interact":  (cat_interact_kb,  "title_interact"),
     "cat_news":      (cat_news_kb,      "title_news"),
 }
-DIRECT_MAP.update(NEW_DIRECT_MAP)
-CAT_MAP.update(NEW_CAT_MAP)
 # ── End: CALLBACK ROUTER — IMG_MAP, DIRECT_MAP, CAT_MAP ──────────────────────
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # PART 3 — 15 NEW FEATURES                                                      ║
@@ -4037,6 +4035,8 @@ NEW_DIRECT_MAP = {
 NEW_CAT_MAP = {
     "cat_profile": (profile_kb, "title_profile"),
 }
+DIRECT_MAP.update(NEW_DIRECT_MAP)
+CAT_MAP.update(NEW_CAT_MAP)
 # ── End: NEW_DIRECT_MAP ADDITIONS ─────────────────────────────────────────────
 
 
@@ -4271,6 +4271,7 @@ if __name__=="__main__":
     init_worker()
     flask_app.run(host="0.0.0.0",port=PORT)
 # ── End: BOT SETUP & STARTUP ──────────────────────────────────────────────────
+
 
 
 
