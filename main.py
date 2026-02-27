@@ -4226,7 +4226,7 @@ async def setup_bot():
         allow_reentry=True,
     )
 
-tg_app.add_handler(CommandHandler("start",start))
+    tg_app.add_handler(CommandHandler("start",start))
     tg_app.add_handler(CommandHandler("menu",menu_cmd))
     tg_app.add_handler(planet_conv)
     tg_app.add_handler(capsule_conv)
@@ -4271,6 +4271,7 @@ if __name__=="__main__":
     init_worker()
     flask_app.run(host="0.0.0.0",port=PORT)
 # ── End: BOT SETUP & STARTUP ──────────────────────────────────────────────────
+
 
 
 
