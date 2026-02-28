@@ -527,6 +527,132 @@ T = {
     "btn_solar_wind":"🔴 Солнечный ветер","btn_kp":"🔴 Kp-индекс","btn_flares":"🔴 Вспышки",
     "btn_live_iss":"🔴 МКС сейчас","btn_radiation":"🔴 Радиация","btn_aurora_f":"🔴 Прогноз сияний",
     "btn_geomag":"🔴 Геомагн. бури","btn_sunspot":"🔴 Пятна Солнца","btn_live_epic":"🔴 Земля EPIC","btn_sat_count":"🔴 Спутники",
+    # ── NEW: handler-level translations ──
+    "telescopes_text":"🔬 *Космические телескопы*\n\n🌌 *JWST* — зеркало 6.5м, орбита L2, инфракрасный\n🔭 *Хаббл* — зеркало 2.4м, оптический/УФ, орбита 600км\n📡 *Чандра* — рентген, эллиптическая орбита\n🌊 *XMM-Newton* — рентген, ESA\n🔭 *Спитцер* — инфракрасный (завершён 2020)\n📡 *VLT* — 4×8.2м, Атакама\n🌐 *FAST* — 500м радиотелескоп, Китай\n🔭 *ELT (~2028)* — зеркало 39м, ESA\n🌌 *Roman (~2027)* — широкоугольный инфракрасный, NASA",
+    "spacefact_title":"⭐ *Факт о космосе*",
+    "meteors_title":"🌠 *Метеорные потоки*",
+    "moon_title":"🌙 *Фаза Луны — {d}*",
+    "moon_photo_tip":"📸 Совет: ISO 100, f/11, 1/250s",
+    "satellites_text":"📡 *Спутники на орбите*\n\n🌍 Всего отслеживается: ~9,000+\n🛸 *Starlink:* {total} всего, {active} активных\n🔭 *Другие:* OneWeb, GPS, Galileo, ГЛОНАСС\n\n[🔗 n2yo.com — трекинг](https://www.n2yo.com)",
+    "launches_title":"🚀 *Ближайшие запуски*",
+    "exoplanets_title":"🔭 *Экзопланеты*",
+    "spaceweather_text_title":"*Космическая погода — Live*",
+    "sw_calm":"🟢 Спокойно","sw_moderate":"🟡 Умеренно","sw_strong":"🟠 Сильно","sw_storm":"🔴 ШТОРМ",
+    "kp_quiet":"🟢 Спокойно","kp_minor":"🟡 Незначительная","kp_moderate":"🟠 Умеренная","kp_strong":"🔴 Сильная","kp_extreme":"🚨 Экстремальная",
+    "aurora_polar":"Только полярные области","aurora_scandinavia":"Скандинавия/Канада","aurora_mid":"Средние широты","aurora_equatorial":"Экватор",
+    "live_solar_wind_title":"🔴 *LIVE: Солнечный ветер*",
+    "live_kp_title":"🔴 *LIVE: Kp-индекс*",
+    "live_flares_title":"🔴 *LIVE: Солнечные вспышки*",
+    "live_iss_title":"🔴 *LIVE: МКС*",
+    "live_radiation_title":"🔴 *LIVE: Радиация*",
+    "live_aurora_title":"🔴 *Прогноз сияний*",
+    "live_geomag_title":"🔴 *Геомагнитные бури (2д)*",
+    "live_sunspot_title":"🔴 *Пятна Солнца (Цикл 25)*",
+    "live_sunspot_text":"Число Вольфа: *{ssn}*\n\nЦикл 25 близок к максимуму — больше вспышек.",
+    "live_epic_title":"🌍 *EPIC Live — Земля*",
+    "live_epic_desc":"Спутник DSCOVR (L1).",
+    "live_starlink_title":"🔴 *Starlink*\n\nВсего: *{total}*  |  Активных: *{active}*\n\nВсе спутники: ~9,000+ на орбите.",
+    "planet_calc_title":"🪐 *Калькулятор планет*",
+    "planet_calc_earth":"🌍 *Земля:* {age} лет  |  {weight} кг",
+    "planet_calc_moon":"🌙 *Луна:* ⚖️ {w} кг (16.5% гравитации)",
+    "planet_calc_days":"💡 Ты прожил *{days}* земных дней!",
+    "name_callsign":"👨‍🚀 *Позывной:*","name_star":"⭐ *Твоя звезда:*",
+    "name_constellation":"📡 Созвездие: {c}  |  Спектр: {s}","name_distance":"📍 Расстояние: {d} световых лет",
+    "rover_active":"🟢 Активен","rover_inactive":"⚪ Неактивен",
+    "rover_landing":"🛬 Посадка:","rover_sol":"☀️ Sol:","rover_photos":"📷 Фото:",
+    "quiz_question_title":"🧠 *Вопрос {n}/10*",
+    "challenge_title":"🎯 *Ежедневный челлендж*","challenge_question":"❓ *Что это за объект?*",
+    "challenge_result_title":"🎯 *Результат челленджа*","challenge_correct":"✅ Правильно!",
+    "challenge_wrong":"❌ Неверно! Ответ: *{ans}*","challenge_loading":"⏳ Загрузка изображения...",
+    "challenge_next":"🎯 Следующий челлендж",
+    "rocket_title":"🚀 *Симулятор посадки Falcon 9*","rocket_step_label":"━━ Шаг {n}/{total} ━━",
+    "rocket_what_do":"*Что ты делаешь?*","rocket_abort":"❌ Прервать миссию",
+    "rocket_boom":"💥 *БУУУМ!*","rocket_wrong_call":"❌ Неверное решение на шаге {n}.",
+    "rocket_crashed":"Falcon 9 разбился о посадочную платформу. Попробуй снова!",
+    "rocket_rsd":"🔧 SpaceX называет это «быстрой внеплановой разборкой».",
+    "rocket_try_again":"🔄 Повторить","rocket_good_call":"✅ *Верное решение!*",
+    "rocket_next":"➡️ Далее...","rocket_touchdown":"🎉 *КАСАНИЕ! ИДЕАЛЬНАЯ ПОСАДКА!*",
+    "rocket_landed":"✅ Falcon 9 успешно сел на посадочную платформу!",
+    "rocket_fuel":"⛽ Остаток топлива: 3%  |  Скорость касания: 2 м/с",
+    "rocket_mastered":"🏅 Ты освоил алгоритм посадки Falcon 9.",
+    "rocket_since2015":"_SpaceX делает это регулярно с 2015 года!_",
+    "rocket_play_again":"🔄 Играть снова",
+    "qa_chars_error":"❌ 3–500 символов","qa_thinking":"🤔 Думаю...","qa_cancelled":"❌ Отменено",
+    "qa_ask_another":"❓ Ещё вопрос","qa_api_error":"❌ API Клод не настроен.",
+    "fav_saved":"⭐ Сохранено!","fav_max":"❌ Максимум 50 избранных",
+    "fav_title":"⭐ *Избранное*","fav_empty":"Сохранённых фото пока нет.\nНажми ⭐ на любом APOD, чтобы сохранить!",
+    "fav_your":"⭐ *Твоё избранное*","fav_total":"_Всего: {n} фото_",
+    "fav_clear":"🗑 Удалить всё","fav_cleared":"🗑 Избранное очищено.",
+    "smart_title":"🔔 *Настройки Smart-оповещений*",
+    "smart_kp_desc":"⚡ Оповещение Kp при ≥ *{v}* (видно сияние)",
+    "smart_ast_desc":"☄️ Оповещение об астероиде при < *{v}* LD",
+    "smart_eq_desc":"🌍 Оповещение о землетрясении при M ≥ *{v}*",
+    "smart_tap":"_Нажми, чтобы изменить порог:_",
+    "smart_kp_ask":"⚡ Отправь порог Kp (1–9, напр. *5* для умеренного сияния):",
+    "smart_ld_ask":"☄️ Отправь порог расстояния LD (1–10, напр. *2* = 2 лунных расстояния):",
+    "smart_eq_ask":"🌍 Отправь порог магнитуды (4–9, напр. *6*):",
+    "smart_kp_err":"❌ Введи число 1–9","smart_ld_err":"❌ Введи число 0.5–20","smart_eq_err":"❌ Введи число 4–9",
+    "smart_kp_set":"✅ Оповещение Kp установлено на ≥ *{v}*",
+    "smart_ld_set":"✅ Оповещение об астероиде установлено на < *{v} LD*",
+    "smart_eq_set":"✅ Оповещение о землетрясении установлено на M ≥ *{v}*",
+    "smart_back":"🔔 К оповещениям",
+    "stats_title":"📊 *Моя космостатистика*",
+    "stats_apod":"📸 APOD просмотрено:","stats_quiz":"🧠 Квизов пройдено:",
+    "stats_perfect":"🏆 Идеальных квизов:","stats_challenge":"🎯 Челленджей:",
+    "stats_favorites":"⭐ Избранных:","stats_achievements":"🏅 Достижения:",
+    "stats_streak":"🔥 Текущая серия:","stats_streak_days":"дней",
+    "stats_since":"📅 Активен с:",
+    "iss_sched_title":"🌠 *Расписание видимости МКС*","iss_sched_enter":"Введи название города:",
+    "iss_sched_examples":"_Примеры: {cities}_",
+    "iss_sched_not_found":"❌ Город не найден. Попробуй: Moscow, London, Tokyo, Tel Aviv, Dubai...",
+    "iss_sched_over":"🌠 *МКС над {city}*",
+    "iss_sched_api_na":"⚠️ API прогноза пролётов недоступен.",
+    "iss_sched_position":"📍 Текущая позиция МКС:","iss_sched_alt":"Высота: ~408 км",
+    "iss_sched_orbit":"🔄 МКС совершает один оборот каждые ~92 мин.",
+    "iss_sched_passes":"⬆️ *Ближайшие пролёты:*",
+    "iss_sched_times":"_Время в UTC. МКС движется со скоростью 28 000 км/ч._",
+    "meteor_map_title":"🗺 *Топ-10 метеоритов (база NASA)*",
+    "meteor_map_famous":"🗺 *Знаменитые метеориты*",
+    "flight_title":"🧮 *Калькулятор полёта*","flight_choose":"Выбери пункт назначения:",
+    "flight_to":"🚀 К *{name}* ({desc})\n\nВыбери скорость:",
+    "flight_result_title":"🧮 *Результат калькулятора полёта*",
+    "flight_from":"📍 Из: Земля  →  {name}","flight_distance":"📏 Расстояние: {km} км",
+    "flight_speed_label":"⚡ Скорость: {name} ({kmh} км/ч)",
+    "flight_time":"🕐 Время полёта: *{t}*",
+    "flight_another":"🔄 Ещё расчёт",
+    "flight_grandchildren":"_Твои праправнуки долетят._",
+    "flight_lightspeed":"_На скорости света — всё равно 2.5 миллиона лет!_",
+    "flight_fuel":"_Топлива нужно на сумму больше ВВП Земли._",
+    "missions_title":"📡 *Активные космические миссии*","missions_select":"Выбери для подробностей:",
+    "missions_all":"◀️ Все миссии","missions_learn":"🔗 Подробнее",
+    "dict_title":"📚 *Космический словарь*","dict_choose":"Выбери термин:",
+    "dict_funfact":"💡 *Интересный факт:*",
+    "course_title":"🎓 *Астрономия за 30 дней*",
+    "course_desc":"Ежедневный урок — от Солнечной системы до космической паутины.",
+    "course_subscribe_btn":"🎓 Подписаться на курс","course_browse_btn":"📚 Все уроки",
+    "course_already":"🎓 Ты уже подписан! День *{day}/30*.\nСледующий урок придёт в 10:00.",
+    "course_subscribed":"✅ *Подписка на курс «Астрономия за 30 дней»!*\n\nВот первый урок:",
+    "course_all":"📚 *Все 30 уроков*","course_day":"🎓 *День {day}/30 — Курс астрономии*",
+    "ach_title":"🏆 *Достижения*","ach_earned":"_Получено: {n}/{total}_",
+    "horo_title":"🌌 *Космогороскоп — {d}*",
+    "horo_moon":"Луна:","horo_kp":"Kp-индекс:","horo_sign":"♾ *Ваш знак сегодня:*",
+    "horo_aurora_high":"🌠 Высокий Kp: сегодня ночью возможно сияние!",
+    "horo_energy_high":"🔴 Высокая космическая активность",
+    "horo_energy_mod":"🟡 Умеренная космическая активность",
+    "horo_energy_calm":"🟢 Спокойный космический день",
+    "eq_title_eonet":"🌍 *Землетрясения NASA EONET (7 дней)*",
+    "eq_title_usgs":"🌍 *Недавние землетрясения M≥5.0 (USGS)*",
+    "eq_subscribe":"🔔 Подписаться на оповещения",
+    "exo_loading":"🔭 Загружаю открытия...",
+    "exo_title":"🔭 *Новые экзопланеты*",
+    "exo_no_data":"Нет данных из архива NASA.",
+    "exo_total":"Всего подтверждённых экзопланет: *5,700+*",
+    "exo_recent":"🔭 *Недавние открытия экзопланет*",
+    "exo_weekly":"🔔 Еженедельные оповещения",
+    "sw_digest_title":"☀️ *Дайджест космической погоды*","sw_digest_loading":"☀️ Загрузка дайджеста...",
+    "cancelled":"❌ Отменено",
+    "capsule_chars_err":"❌ 5–2000 символов",
+    "sat_tracker_title":"🛸 *Трекер спутников*","sat_tracker_choose":"Выбери аппарат:",
 },
 "en": {
     "choose_lang":"🌍 *Choose language / Выберите язык / בחרו שפה / اختر اللغة*",
@@ -646,6 +772,132 @@ T = {
     "btn_solar_wind":"🔴 Solar Wind","btn_kp":"🔴 Kp-index","btn_flares":"🔴 Flares",
     "btn_live_iss":"🔴 ISS Now","btn_radiation":"🔴 Radiation","btn_aurora_f":"🔴 Aurora Forecast",
     "btn_geomag":"🔴 Geomag. Storms","btn_sunspot":"🔴 Sunspots","btn_live_epic":"🔴 Earth EPIC","btn_sat_count":"🔴 Satellites",
+    # ── NEW: handler-level translations ──
+    "telescopes_text":"🔬 *Space Telescopes*\n\n🌌 *JWST* — mirror 6.5m, orbit L2, infrared\n🔭 *Hubble* — mirror 2.4m, optical/UV, 600km orbit\n📡 *Chandra* — X-ray, high elliptical orbit\n🌊 *XMM-Newton* — X-ray, ESA\n🔭 *Spitzer* — infrared (retired 2020)\n📡 *VLT* — 4×8.2m, Atacama\n🌐 *FAST* — 500m radio dish, China\n🔭 *ELT (~2028)* — 39m mirror, ESA\n🌌 *Roman (~2027)* — wide-field infrared, NASA",
+    "spacefact_title":"⭐ *Space Fact*",
+    "meteors_title":"🌠 *Meteor Showers*",
+    "moon_title":"🌙 *Moon Phase — {d}*",
+    "moon_photo_tip":"📸 Photo tip: ISO 100, f/11, 1/250s",
+    "satellites_text":"📡 *Satellites in Orbit*\n\n🌍 Total tracked: ~9,000+\n🛸 *Starlink:* {total} total, {active} active\n🔭 *Other constellations:* OneWeb, GPS, Galileo, GLONASS\n\n[🔗 n2yo.com — live tracking](https://www.n2yo.com)",
+    "launches_title":"🚀 *Upcoming Launches*",
+    "exoplanets_title":"🔭 *Exoplanets*",
+    "spaceweather_text_title":"*Space Weather — Live*",
+    "sw_calm":"🟢 Calm","sw_moderate":"🟡 Moderate","sw_strong":"🟠 Strong","sw_storm":"🔴 STORM",
+    "kp_quiet":"🟢 Quiet","kp_minor":"🟡 Minor","kp_moderate":"🟠 Moderate","kp_strong":"🔴 Strong","kp_extreme":"🚨 G5",
+    "aurora_polar":"Polar only","aurora_scandinavia":"Scandinavia/Canada","aurora_mid":"Mid-latitudes","aurora_equatorial":"Equatorial",
+    "live_solar_wind_title":"🔴 *LIVE: Solar Wind*",
+    "live_kp_title":"🔴 *LIVE: Kp-index*",
+    "live_flares_title":"🔴 *LIVE: Solar Flares*",
+    "live_iss_title":"🔴 *LIVE: ISS*",
+    "live_radiation_title":"🔴 *LIVE: Radiation*",
+    "live_aurora_title":"🔴 *Aurora Forecast*",
+    "live_geomag_title":"🔴 *Geomagnetic Storms (2d)*",
+    "live_sunspot_title":"🔴 *Sunspots (Cycle 25)*",
+    "live_sunspot_text":"Wolf number: *{ssn}*\n\nCycle 25 near maximum — more flares.",
+    "live_epic_title":"🌍 *EPIC Live — Earth*",
+    "live_epic_desc":"DSCOVR satellite (L1).",
+    "live_starlink_title":"🔴 *Starlink*\n\nTotal: *{total}*  |  Active: *{active}*\n\nAll satellites: ~9,000+ in orbit.",
+    "planet_calc_title":"🪐 *Planet Calculator*",
+    "planet_calc_earth":"🌍 *Earth:* {age} yrs  |  {weight} kg",
+    "planet_calc_moon":"🌙 *Moon:* ⚖️ {w} kg (16.5% gravity)",
+    "planet_calc_days":"💡 You've lived *{days}* Earth days!",
+    "name_callsign":"👨‍🚀 *Callsign:*","name_star":"⭐ *Your star:*",
+    "name_constellation":"📡 Constellation: {c}  |  Spectral: {s}","name_distance":"📍 Distance: {d} light-years",
+    "rover_active":"🟢 Active","rover_inactive":"⚪ Inactive",
+    "rover_landing":"🛬 Landing:","rover_sol":"☀️ Sol:","rover_photos":"📷 Photos:",
+    "quiz_question_title":"🧠 *Question {n}/10*",
+    "challenge_title":"🎯 *Daily Challenge*","challenge_question":"❓ *What is this object?*",
+    "challenge_result_title":"🎯 *Challenge Result*","challenge_correct":"✅ Correct!",
+    "challenge_wrong":"❌ Wrong! Answer: *{ans}*","challenge_loading":"⏳ Loading challenge image...",
+    "challenge_next":"🎯 Next challenge",
+    "rocket_title":"🚀 *Falcon 9 Landing Simulator*","rocket_step_label":"━━ Step {n}/{total} ━━",
+    "rocket_what_do":"*What do you do?*","rocket_abort":"❌ Abort mission",
+    "rocket_boom":"💥 *BOOOM!*","rocket_wrong_call":"❌ Wrong call at step {n}.",
+    "rocket_crashed":"The Falcon 9 crashed into the drone ship. Try again!",
+    "rocket_rsd":"🔧 SpaceX calls this a 'rapid unscheduled disassembly'.",
+    "rocket_try_again":"🔄 Try again","rocket_good_call":"✅ *Good call!*",
+    "rocket_next":"➡️ Next step...","rocket_touchdown":"🎉 *TOUCHDOWN! PERFECT LANDING!*",
+    "rocket_landed":"✅ Falcon 9 successfully landed on the drone ship!",
+    "rocket_fuel":"⛽ Fuel remaining: 3%  |  Speed at touchdown: 2 m/s",
+    "rocket_mastered":"🏅 You've mastered the Falcon 9 landing algorithm.",
+    "rocket_since2015":"_SpaceX does this routinely since 2015!_",
+    "rocket_play_again":"🔄 Play again",
+    "qa_chars_error":"❌ 3–500 chars","qa_thinking":"🤔 Thinking...","qa_cancelled":"❌ Cancelled",
+    "qa_ask_another":"❓ Ask another","qa_api_error":"❌ Claude API key not configured.",
+    "fav_saved":"⭐ Saved!","fav_max":"❌ Max 50 favorites",
+    "fav_title":"⭐ *Favorites*","fav_empty":"No saved photos yet.\nTap ⭐ on any APOD to save it!",
+    "fav_your":"⭐ *Your Favorites*","fav_total":"_Total: {n} photos_",
+    "fav_clear":"🗑 Clear all","fav_cleared":"🗑 Favorites cleared.",
+    "smart_title":"🔔 *Smart Alerts Settings*",
+    "smart_kp_desc":"⚡ Kp alert when ≥ *{v}* (aurora visible)",
+    "smart_ast_desc":"☄️ Asteroid alert when < *{v}* LD",
+    "smart_eq_desc":"🌍 Earthquake alert when M ≥ *{v}*",
+    "smart_tap":"_Tap to change a threshold:_",
+    "smart_kp_ask":"⚡ Send Kp threshold (1–9, e.g. *5* for moderate aurora):",
+    "smart_ld_ask":"☄️ Send asteroid LD threshold (1–10, e.g. *2* = within 2 lunar distances):",
+    "smart_eq_ask":"🌍 Send earthquake M threshold (4–9, e.g. *6*):",
+    "smart_kp_err":"❌ Enter 1–9","smart_ld_err":"❌ Enter 0.5–20","smart_eq_err":"❌ Enter 4–9",
+    "smart_kp_set":"✅ Kp alert set to ≥ *{v}*",
+    "smart_ld_set":"✅ Asteroid alert set to < *{v} LD*",
+    "smart_eq_set":"✅ Earthquake alert set to M ≥ *{v}*",
+    "smart_back":"🔔 Back to alerts",
+    "stats_title":"📊 *My Space Stats*",
+    "stats_apod":"📸 APOD viewed:","stats_quiz":"🧠 Quizzes taken:",
+    "stats_perfect":"🏆 Perfect quizzes:","stats_challenge":"🎯 Challenges done:",
+    "stats_favorites":"⭐ Favorites saved:","stats_achievements":"🏅 Achievements:",
+    "stats_streak":"🔥 Current streak:","stats_streak_days":"days",
+    "stats_since":"📅 Active since:",
+    "iss_sched_title":"🌠 *ISS Visibility Schedule*","iss_sched_enter":"Enter your city name:",
+    "iss_sched_examples":"_Examples: {cities}_",
+    "iss_sched_not_found":"❌ City not found. Try: Moscow, London, Tokyo, Tel Aviv, Dubai...",
+    "iss_sched_over":"🌠 *ISS over {city}*",
+    "iss_sched_api_na":"⚠️ Pass prediction API unavailable.",
+    "iss_sched_position":"📍 ISS current position:","iss_sched_alt":"Altitude: ~408 km",
+    "iss_sched_orbit":"🔄 ISS completes one orbit every ~92 min.",
+    "iss_sched_passes":"⬆️ *Upcoming passes:*",
+    "iss_sched_times":"_Times are local UTC. ISS moves at 28,000 km/h._",
+    "meteor_map_title":"🗺 *Top 10 Meteorites (NASA Database)*",
+    "meteor_map_famous":"🗺 *Famous Meteorites*",
+    "flight_title":"🧮 *Flight Calculator*","flight_choose":"Choose your destination:",
+    "flight_to":"🚀 To *{name}* ({desc})\n\nChoose your spacecraft speed:",
+    "flight_result_title":"🧮 *Flight Calculator Result*",
+    "flight_from":"📍 From: Earth  →  {name}","flight_distance":"📏 Distance: {km} km",
+    "flight_speed_label":"⚡ Speed: {name} ({kmh} km/h)",
+    "flight_time":"🕐 Travel time: *{t}*",
+    "flight_another":"🔄 Calculate another",
+    "flight_grandchildren":"_Your great-great-grandchildren would arrive._",
+    "flight_lightspeed":"_At lightspeed — still 2.5 million years!_",
+    "flight_fuel":"_You'd need fuel worth more than the GDP of Earth._",
+    "missions_title":"📡 *Active Space Missions*","missions_select":"Select to learn more:",
+    "missions_all":"◀️ All missions","missions_learn":"🔗 Learn more",
+    "dict_title":"📚 *Space Dictionary*","dict_choose":"Choose a term:",
+    "dict_funfact":"💡 *Fun fact:*",
+    "course_title":"🎓 *Astronomy in 30 Days*",
+    "course_desc":"A daily lesson delivered to your inbox — from the Solar System to the cosmic web.",
+    "course_subscribe_btn":"🎓 Subscribe to course","course_browse_btn":"📚 Browse all lessons",
+    "course_already":"🎓 Already subscribed! You're on Day *{day}/30*.\nNext lesson comes daily at 10:00.",
+    "course_subscribed":"✅ *Subscribed to 30-Day Astronomy Course!*\n\nHere's your first lesson:",
+    "course_all":"📚 *All 30 Lessons*","course_day":"🎓 *Day {day}/30 — Astronomy Course*",
+    "ach_title":"🏆 *Achievements*","ach_earned":"_Earned: {n}/{total}_",
+    "horo_title":"🌌 *Space Horoscope — {d}*",
+    "horo_moon":"Moon:","horo_kp":"Kp-index:","horo_sign":"♾ *Your sign today:*",
+    "horo_aurora_high":"🌠 High Kp: Aurora possible tonight!",
+    "horo_energy_high":"🔴 High cosmic activity",
+    "horo_energy_mod":"🟡 Moderate cosmic activity",
+    "horo_energy_calm":"🟢 Calm cosmic day",
+    "eq_title_eonet":"🌍 *NASA EONET Earthquakes (7 days)*",
+    "eq_title_usgs":"🌍 *Recent Earthquakes M≥5.0 (USGS)*",
+    "eq_subscribe":"🔔 Subscribe alerts",
+    "exo_loading":"🔭 Loading discoveries...",
+    "exo_title":"🔭 *New Exoplanet Discoveries*",
+    "exo_no_data":"No recent data available from NASA Archive.",
+    "exo_total":"Total confirmed exoplanets: *5,700+*",
+    "exo_recent":"🔭 *Recent Exoplanet Discoveries*",
+    "exo_weekly":"🔔 Weekly alerts",
+    "sw_digest_title":"☀️ *Space Weather Digest*","sw_digest_loading":"☀️ Loading digest...",
+    "cancelled":"❌ Cancelled",
+    "capsule_chars_err":"❌ 5–2000 chars",
+    "sat_tracker_title":"🛸 *Satellite Tracker*","sat_tracker_choose":"Select a spacecraft:",
 },
 "he": {
     "choose_lang":"🌍 *Выберите язык / Choose language / בחרו שפה / اختر اللغة*",
@@ -750,6 +1002,132 @@ T = {
     "btn_solar_wind":"🔴 רוח","btn_kp":"🔴 Kp","btn_flares":"🔴 להבות",
     "btn_live_iss":"🔴 ISS","btn_radiation":"🔴 קרינה","btn_aurora_f":"🔴 זוהר",
     "btn_geomag":"🔴 סערות","btn_sunspot":"🔴 כתמים","btn_live_epic":"🔴 EPIC","btn_sat_count":"🔴 לוויינים",
+    # ── NEW: handler-level translations ──
+    "telescopes_text":"🔬 *טלסקופים בחלל*\n\n🌌 *JWST* — מראה 6.5מ', מסלול L2, אינפרא-אדום\n🔭 *האבל* — מראה 2.4מ', אופטי/UV, 600 ק\"מ\n📡 *צ'נדרה* — רנטגן, מסלול אליפטי\n🌊 *XMM-Newton* — רנטגן, ESA\n🔭 *ספיצר* — אינפרא-אדום (הושבת 2020)\n📡 *VLT* — 4×8.2מ', אטקמה\n🌐 *FAST* — צלחת רדיו 500מ', סין\n🔭 *ELT (~2028)* — מראה 39מ', ESA\n🌌 *רומן (~2027)* — רחב שדה, NASA",
+    "spacefact_title":"⭐ *עובדה מהחלל*",
+    "meteors_title":"🌠 *גשמי מטאורים*",
+    "moon_title":"🌙 *שלב הירח — {d}*",
+    "moon_photo_tip":"📸 טיפ צילום: ISO 100, f/11, 1/250s",
+    "satellites_text":"📡 *לוויינים במסלול*\n\n🌍 סה\"כ: ~9,000+\n🛸 *Starlink:* {total} סה\"כ, {active} פעילים\n🔭 *אחרים:* OneWeb, GPS, Galileo, GLONASS\n\n[🔗 n2yo.com](https://www.n2yo.com)",
+    "launches_title":"🚀 *שיגורים קרובים*",
+    "exoplanets_title":"🔭 *כוכבי לכת חוץ-שמשיים*",
+    "spaceweather_text_title":"*מזג אוויר חלל — Live*",
+    "sw_calm":"🟢 רגוע","sw_moderate":"🟡 בינוני","sw_strong":"🟠 חזק","sw_storm":"🔴 סערה",
+    "kp_quiet":"🟢 רגוע","kp_minor":"🟡 קל","kp_moderate":"🟠 בינוני","kp_strong":"🔴 חזק","kp_extreme":"🚨 קיצוני",
+    "aurora_polar":"קוטבי בלבד","aurora_scandinavia":"סקנדינביה/קנדה","aurora_mid":"רוחב ביניים","aurora_equatorial":"קו המשווה",
+    "live_solar_wind_title":"🔴 *LIVE: רוח סולארית*",
+    "live_kp_title":"🔴 *LIVE: מדד Kp*",
+    "live_flares_title":"🔴 *LIVE: להבות סולאריות*",
+    "live_iss_title":"🔴 *LIVE: ISS*",
+    "live_radiation_title":"🔴 *LIVE: קרינה*",
+    "live_aurora_title":"🔴 *תחזית זוהר*",
+    "live_geomag_title":"🔴 *סערות גיאומגנטיות (יומיים)*",
+    "live_sunspot_title":"🔴 *כתמי שמש (מחזור 25)*",
+    "live_sunspot_text":"מספר וולף: *{ssn}*\n\nמחזור 25 קרוב למקסימום — יותר להבות.",
+    "live_epic_title":"🌍 *EPIC Live — כדור הארץ*",
+    "live_epic_desc":"לוויין DSCOVR (L1).",
+    "live_starlink_title":"🔴 *Starlink*\n\nסה\"כ: *{total}*  |  פעילים: *{active}*\n\nכל הלוויינים: ~9,000+ במסלול.",
+    "planet_calc_title":"🪐 *מחשבון כוכבים*",
+    "planet_calc_earth":"🌍 *כדור הארץ:* {age} שנים  |  {weight} ק\"ג",
+    "planet_calc_moon":"🌙 *ירח:* ⚖️ {w} ק\"ג (16.5% כבידה)",
+    "planet_calc_days":"💡 חיית *{days}* ימי כדור הארץ!",
+    "name_callsign":"👨‍🚀 *קוד קריאה:*","name_star":"⭐ *הכוכב שלך:*",
+    "name_constellation":"📡 קבוצת כוכבים: {c}  |  ספקטרלי: {s}","name_distance":"📍 מרחק: {d} שנות אור",
+    "rover_active":"🟢 פעיל","rover_inactive":"⚪ לא פעיל",
+    "rover_landing":"🛬 נחיתה:","rover_sol":"☀️ Sol:","rover_photos":"📷 תמונות:",
+    "quiz_question_title":"🧠 *שאלה {n}/10*",
+    "challenge_title":"🎯 *אתגר יומי*","challenge_question":"❓ *מה האובייקט הזה?*",
+    "challenge_result_title":"🎯 *תוצאת האתגר*","challenge_correct":"✅ נכון!",
+    "challenge_wrong":"❌ לא נכון! תשובה: *{ans}*","challenge_loading":"⏳ טוען תמונת אתגר...",
+    "challenge_next":"🎯 אתגר הבא",
+    "rocket_title":"🚀 *סימולטור נחיתת Falcon 9*","rocket_step_label":"━━ שלב {n}/{total} ━━",
+    "rocket_what_do":"*מה אתה עושה?*","rocket_abort":"❌ ביטול משימה",
+    "rocket_boom":"💥 *בוום!*","rocket_wrong_call":"❌ החלטה שגויה בשלב {n}.",
+    "rocket_crashed":"Falcon 9 התרסק על ספינת הנחיתה. נסה שוב!",
+    "rocket_rsd":"🔧 SpaceX קוראים לזה 'פירוק לא מתוכנן מהיר'.",
+    "rocket_try_again":"🔄 נסה שוב","rocket_good_call":"✅ *החלטה טובה!*",
+    "rocket_next":"➡️ שלב הבא...","rocket_touchdown":"🎉 *נחיתה! מושלמת!*",
+    "rocket_landed":"✅ Falcon 9 נחת בהצלחה על ספינת הנחיתה!",
+    "rocket_fuel":"⛽ דלק שנשאר: 3%  |  מהירות נחיתה: 2 מ'/ש'",
+    "rocket_mastered":"🏅 שלטת באלגוריתם הנחיתה של Falcon 9.",
+    "rocket_since2015":"_SpaceX עושים את זה שגרתית מ-2015!_",
+    "rocket_play_again":"🔄 שחק שוב",
+    "qa_chars_error":"❌ 3–500 תווים","qa_thinking":"🤔 חושב...","qa_cancelled":"❌ בוטל",
+    "qa_ask_another":"❓ שאל עוד","qa_api_error":"❌ מפתח API לא מוגדר.",
+    "fav_saved":"⭐ נשמר!","fav_max":"❌ מקסימום 50 מועדפים",
+    "fav_title":"⭐ *מועדפים*","fav_empty":"אין תמונות שמורות עדיין.\nלחץ ⭐ על כל APOD כדי לשמור!",
+    "fav_your":"⭐ *המועדפים שלך*","fav_total":"_סה\"כ: {n} תמונות_",
+    "fav_clear":"🗑 מחק הכל","fav_cleared":"🗑 המועדפים נמחקו.",
+    "smart_title":"🔔 *הגדרות התראות חכמות*",
+    "smart_kp_desc":"⚡ התראת Kp כש- ≥ *{v}* (זוהר נראה)",
+    "smart_ast_desc":"☄️ התראת אסטרואיד כש- < *{v}* LD",
+    "smart_eq_desc":"🌍 התראת רעידת אדמה כש- M ≥ *{v}*",
+    "smart_tap":"_לחץ לשינוי סף:_",
+    "smart_kp_ask":"⚡ שלח סף Kp (1–9, למשל *5* לזוהר בינוני):",
+    "smart_ld_ask":"☄️ שלח סף LD (1–10, למשל *2* = 2 מרחקי ירח):",
+    "smart_eq_ask":"🌍 שלח סף מגניטודה (4–9, למשל *6*):",
+    "smart_kp_err":"❌ הכנס 1–9","smart_ld_err":"❌ הכנס 0.5–20","smart_eq_err":"❌ הכנס 4–9",
+    "smart_kp_set":"✅ התראת Kp הוגדרה ל- ≥ *{v}*",
+    "smart_ld_set":"✅ התראת אסטרואיד הוגדרה ל- < *{v} LD*",
+    "smart_eq_set":"✅ התראת רעידה הוגדרה ל- M ≥ *{v}*",
+    "smart_back":"🔔 חזרה להתראות",
+    "stats_title":"📊 *הסטטיסטיקה שלי*",
+    "stats_apod":"📸 APOD נצפו:","stats_quiz":"🧠 חידונים:",
+    "stats_perfect":"🏆 חידונים מושלמים:","stats_challenge":"🎯 אתגרים:",
+    "stats_favorites":"⭐ מועדפים:","stats_achievements":"🏅 הישגים:",
+    "stats_streak":"🔥 רצף נוכחי:","stats_streak_days":"ימים",
+    "stats_since":"📅 פעיל מאז:",
+    "iss_sched_title":"🌠 *לוח מעברי ISS*","iss_sched_enter":"הכנס שם עיר:",
+    "iss_sched_examples":"_דוגמאות: {cities}_",
+    "iss_sched_not_found":"❌ עיר לא נמצאה. נסה: Moscow, London, Tokyo, Tel Aviv, Dubai...",
+    "iss_sched_over":"🌠 *ISS מעל {city}*",
+    "iss_sched_api_na":"⚠️ API חיזוי מעברים לא זמין.",
+    "iss_sched_position":"📍 מיקום ISS נוכחי:","iss_sched_alt":"גובה: ~408 ק\"מ",
+    "iss_sched_orbit":"🔄 ISS משלים מסלול כל ~92 דקות.",
+    "iss_sched_passes":"⬆️ *מעברים קרובים:*",
+    "iss_sched_times":"_הזמנים ב-UTC. ISS נע ב-28,000 קמ\"ש._",
+    "meteor_map_title":"🗺 *10 מטאוריטים גדולים (NASA)*",
+    "meteor_map_famous":"🗺 *מטאוריטים מפורסמים*",
+    "flight_title":"🧮 *מחשבון טיסה*","flight_choose":"בחר יעד:",
+    "flight_to":"🚀 אל *{name}* ({desc})\n\nבחר מהירות:",
+    "flight_result_title":"🧮 *תוצאת מחשבון טיסה*",
+    "flight_from":"📍 מ: כדור הארץ  →  {name}","flight_distance":"📏 מרחק: {km} ק\"מ",
+    "flight_speed_label":"⚡ מהירות: {name} ({kmh} קמ\"ש)",
+    "flight_time":"🕐 זמן נסיעה: *{t}*",
+    "flight_another":"🔄 חישוב נוסף",
+    "flight_grandchildren":"_הנינים שלך יגיעו._",
+    "flight_lightspeed":"_במהירות האור — עדיין 2.5 מיליון שנה!_",
+    "flight_fuel":"_דלק בעלות גבוהה מהתמ\"ג של כדור הארץ._",
+    "missions_title":"📡 *משימות חלל פעילות*","missions_select":"בחר למידע נוסף:",
+    "missions_all":"◀️ כל המשימות","missions_learn":"🔗 למידע נוסף",
+    "dict_title":"📚 *מילון חלל*","dict_choose":"בחר מונח:",
+    "dict_funfact":"💡 *עובדה מעניינת:*",
+    "course_title":"🎓 *אסטרונומיה ב-30 ימים*",
+    "course_desc":"שיעור יומי — ממערכת השמש ועד הרשת הקוסמית.",
+    "course_subscribe_btn":"🎓 הרשמה לקורס","course_browse_btn":"📚 כל השיעורים",
+    "course_already":"🎓 כבר רשום! אתה ביום *{day}/30*.\nהשיעור הבא ב-10:00.",
+    "course_subscribed":"✅ *נרשמת לקורס אסטרונומיה 30 ימים!*\n\nהנה השיעור הראשון:",
+    "course_all":"📚 *כל 30 השיעורים*","course_day":"🎓 *יום {day}/30 — קורס אסטרונומיה*",
+    "ach_title":"🏆 *הישגים*","ach_earned":"_הושגו: {n}/{total}_",
+    "horo_title":"🌌 *הורוסקופ חלל — {d}*",
+    "horo_moon":"ירח:","horo_kp":"מדד Kp:","horo_sign":"♾ *המזל שלך היום:*",
+    "horo_aurora_high":"🌠 Kp גבוה: זוהר אפשרי הלילה!",
+    "horo_energy_high":"🔴 פעילות קוסמית גבוהה",
+    "horo_energy_mod":"🟡 פעילות קוסמית בינונית",
+    "horo_energy_calm":"🟢 יום קוסמי רגוע",
+    "eq_title_eonet":"🌍 *רעידות אדמה NASA EONET (7 ימים)*",
+    "eq_title_usgs":"🌍 *רעידות אחרונות M≥5.0 (USGS)*",
+    "eq_subscribe":"🔔 הרשמה להתראות",
+    "exo_loading":"🔭 טוען גילויים...",
+    "exo_title":"🔭 *גילויי כוכבי לכת חדשים*",
+    "exo_no_data":"אין נתונים עדכניים מארכיון NASA.",
+    "exo_total":"סה\"כ כוכבי לכת מאושרים: *5,700+*",
+    "exo_recent":"🔭 *גילויים אחרונים*",
+    "exo_weekly":"🔔 התראות שבועיות",
+    "sw_digest_title":"☀️ *תקציר מזג חלל*","sw_digest_loading":"☀️ טוען תקציר...",
+    "cancelled":"❌ בוטל",
+    "capsule_chars_err":"❌ 5–2000 תווים",
+    "sat_tracker_title":"🛸 *עוקב לוויינים*","sat_tracker_choose":"בחר חללית:",
 },
 "ar": {
     "choose_lang":"🌍 *Выберите язык / Choose language / בחרו שפה / اختر اللغة*",
@@ -854,6 +1232,132 @@ T = {
     "btn_solar_wind":"🔴 رياح","btn_kp":"🔴 Kp","btn_flares":"🔴 توهجات",
     "btn_live_iss":"🔴 محطة","btn_radiation":"🔴 إشعاع","btn_aurora_f":"🔴 شفق",
     "btn_geomag":"🔴 عواصف","btn_sunspot":"🔴 بقع","btn_live_epic":"🔴 EPIC","btn_sat_count":"🔴 أقمار",
+    # ── NEW: handler-level translations ──
+    "telescopes_text":"🔬 *تلسكوبات الفضاء*\n\n🌌 *JWST* — مرآة 6.5م، مدار L2، الأشعة تحت الحمراء\n🔭 *هابل* — مرآة 2.4م، بصري/فوق بنفسجي، 600 كم\n📡 *تشاندرا* — أشعة سينية، مدار إهليلجي\n🌊 *XMM-Newton* — أشعة سينية، ESA\n🔭 *سبيتزر* — تحت الحمراء (تقاعد 2020)\n📡 *VLT* — 4×8.2م، أتاكاما\n🌐 *FAST* — طبق راديو 500م، الصين\n🔭 *ELT (~2028)* — مرآة 39م، ESA\n🌌 *رومان (~2027)* — واسع المجال، NASA",
+    "spacefact_title":"⭐ *حقيقة فضائية*",
+    "meteors_title":"🌠 *زخات الشهب*",
+    "moon_title":"🌙 *مرحلة القمر — {d}*",
+    "moon_photo_tip":"📸 نصيحة: ISO 100, f/11, 1/250s",
+    "satellites_text":"📡 *أقمار في المدار*\n\n🌍 المتعقّب: ~9,000+\n🛸 *Starlink:* {total} إجمالي، {active} نشط\n🔭 *أخرى:* OneWeb, GPS, Galileo, GLONASS\n\n[🔗 n2yo.com](https://www.n2yo.com)",
+    "launches_title":"🚀 *إطلاقات قادمة*",
+    "exoplanets_title":"🔭 *كواكب خارجية*",
+    "spaceweather_text_title":"*طقس الفضاء — مباشر*",
+    "sw_calm":"🟢 هادئ","sw_moderate":"🟡 معتدل","sw_strong":"🟠 قوي","sw_storm":"🔴 عاصفة",
+    "kp_quiet":"🟢 هادئ","kp_minor":"🟡 طفيف","kp_moderate":"🟠 معتدل","kp_strong":"🔴 قوي","kp_extreme":"🚨 شديد",
+    "aurora_polar":"القطب فقط","aurora_scandinavia":"سكندنافيا/كندا","aurora_mid":"خطوط العرض الوسطى","aurora_equatorial":"خط الاستواء",
+    "live_solar_wind_title":"🔴 *مباشر: الرياح الشمسية*",
+    "live_kp_title":"🔴 *مباشر: مؤشر Kp*",
+    "live_flares_title":"🔴 *مباشر: التوهجات الشمسية*",
+    "live_iss_title":"🔴 *مباشر: محطة الفضاء*",
+    "live_radiation_title":"🔴 *مباشر: الإشعاع*",
+    "live_aurora_title":"🔴 *توقعات الشفق*",
+    "live_geomag_title":"🔴 *العواصف المغناطيسية (يومان)*",
+    "live_sunspot_title":"🔴 *البقع الشمسية (الدورة 25)*",
+    "live_sunspot_text":"رقم وولف: *{ssn}*\n\nالدورة 25 قرب الذروة — المزيد من التوهجات.",
+    "live_epic_title":"🌍 *EPIC مباشر — الأرض*",
+    "live_epic_desc":"القمر الصناعي DSCOVR (L1).",
+    "live_starlink_title":"🔴 *Starlink*\n\nالإجمالي: *{total}*  |  النشط: *{active}*\n\nكل الأقمار: ~9,000+ في المدار.",
+    "planet_calc_title":"🪐 *حاسبة الكواكب*",
+    "planet_calc_earth":"🌍 *الأرض:* {age} سنة  |  {weight} كغ",
+    "planet_calc_moon":"🌙 *القمر:* ⚖️ {w} كغ (16.5% جاذبية)",
+    "planet_calc_days":"💡 عشت *{days}* يوماً أرضياً!",
+    "name_callsign":"👨‍🚀 *رمز النداء:*","name_star":"⭐ *نجمك:*",
+    "name_constellation":"📡 كوكبة: {c}  |  طيفي: {s}","name_distance":"📍 المسافة: {d} سنة ضوئية",
+    "rover_active":"🟢 نشط","rover_inactive":"⚪ غير نشط",
+    "rover_landing":"🛬 هبوط:","rover_sol":"☀️ Sol:","rover_photos":"📷 صور:",
+    "quiz_question_title":"🧠 *سؤال {n}/10*",
+    "challenge_title":"🎯 *تحدي يومي*","challenge_question":"❓ *ما هذا الجسم؟*",
+    "challenge_result_title":"🎯 *نتيجة التحدي*","challenge_correct":"✅ صحيح!",
+    "challenge_wrong":"❌ خطأ! الإجابة: *{ans}*","challenge_loading":"⏳ جاري تحميل صورة التحدي...",
+    "challenge_next":"🎯 التحدي التالي",
+    "rocket_title":"🚀 *محاكي هبوط Falcon 9*","rocket_step_label":"━━ خطوة {n}/{total} ━━",
+    "rocket_what_do":"*ماذا تفعل؟*","rocket_abort":"❌ إلغاء المهمة",
+    "rocket_boom":"💥 *بوووم!*","rocket_wrong_call":"❌ قرار خاطئ في الخطوة {n}.",
+    "rocket_crashed":"Falcon 9 تحطم على سفينة الهبوط. حاول مرة أخرى!",
+    "rocket_rsd":"🔧 SpaceX يسمون هذا 'تفكيك سريع غير مجدول'.",
+    "rocket_try_again":"🔄 حاول مرة أخرى","rocket_good_call":"✅ *قرار صائب!*",
+    "rocket_next":"➡️ الخطوة التالية...","rocket_touchdown":"🎉 *هبوط! مثالي!*",
+    "rocket_landed":"✅ Falcon 9 هبط بنجاح على سفينة الهبوط!",
+    "rocket_fuel":"⛽ الوقود المتبقي: 3%  |  سرعة الهبوط: 2 م/ث",
+    "rocket_mastered":"🏅 أتقنت خوارزمية هبوط Falcon 9.",
+    "rocket_since2015":"_SpaceX يفعلون هذا بشكل روتيني منذ 2015!_",
+    "rocket_play_again":"🔄 العب مرة أخرى",
+    "qa_chars_error":"❌ 3–500 حرف","qa_thinking":"🤔 أفكر...","qa_cancelled":"❌ تم الإلغاء",
+    "qa_ask_another":"❓ اسأل مجدداً","qa_api_error":"❌ مفتاح API غير مُعدّ.",
+    "fav_saved":"⭐ تم الحفظ!","fav_max":"❌ الحد الأقصى 50 مفضلة",
+    "fav_title":"⭐ *المفضلة*","fav_empty":"لا توجد صور محفوظة بعد.\nاضغط ⭐ على أي APOD لحفظها!",
+    "fav_your":"⭐ *مفضلاتك*","fav_total":"_الإجمالي: {n} صورة_",
+    "fav_clear":"🗑 مسح الكل","fav_cleared":"🗑 تم مسح المفضلة.",
+    "smart_title":"🔔 *إعدادات التنبيهات الذكية*",
+    "smart_kp_desc":"⚡ تنبيه Kp عند ≥ *{v}* (شفق مرئي)",
+    "smart_ast_desc":"☄️ تنبيه كويكب عند < *{v}* LD",
+    "smart_eq_desc":"🌍 تنبيه زلزال عند M ≥ *{v}*",
+    "smart_tap":"_اضغط لتغيير الحد:_",
+    "smart_kp_ask":"⚡ أرسل حد Kp (1–9، مثلاً *5* لشفق معتدل):",
+    "smart_ld_ask":"☄️ أرسل حد LD (1–10، مثلاً *2* = مسافتين قمريتين):",
+    "smart_eq_ask":"🌍 أرسل حد المقدار (4–9، مثلاً *6*):",
+    "smart_kp_err":"❌ أدخل 1–9","smart_ld_err":"❌ أدخل 0.5–20","smart_eq_err":"❌ أدخل 4–9",
+    "smart_kp_set":"✅ تنبيه Kp ضُبط على ≥ *{v}*",
+    "smart_ld_set":"✅ تنبيه الكويكب ضُبط على < *{v} LD*",
+    "smart_eq_set":"✅ تنبيه الزلزال ضُبط على M ≥ *{v}*",
+    "smart_back":"🔔 العودة للتنبيهات",
+    "stats_title":"📊 *إحصائياتي الفضائية*",
+    "stats_apod":"📸 APOD شوهدت:","stats_quiz":"🧠 اختبارات:",
+    "stats_perfect":"🏆 اختبارات مثالية:","stats_challenge":"🎯 تحديات:",
+    "stats_favorites":"⭐ المفضلة:","stats_achievements":"🏅 إنجازات:",
+    "stats_streak":"🔥 السلسلة الحالية:","stats_streak_days":"أيام",
+    "stats_since":"📅 نشط منذ:",
+    "iss_sched_title":"🌠 *جدول رؤية ISS*","iss_sched_enter":"أدخل اسم مدينتك:",
+    "iss_sched_examples":"_أمثلة: {cities}_",
+    "iss_sched_not_found":"❌ المدينة غير موجودة. جرب: Moscow, London, Tokyo, Tel Aviv, Dubai...",
+    "iss_sched_over":"🌠 *ISS فوق {city}*",
+    "iss_sched_api_na":"⚠️ واجهة توقع المرور غير متاحة.",
+    "iss_sched_position":"📍 موقع ISS الحالي:","iss_sched_alt":"الارتفاع: ~408 كم",
+    "iss_sched_orbit":"🔄 ISS يكمل مداراً كل ~92 دقيقة.",
+    "iss_sched_passes":"⬆️ *المرور القادم:*",
+    "iss_sched_times":"_الأوقات بتوقيت UTC. ISS يتحرك بسرعة 28,000 كم/ساعة._",
+    "meteor_map_title":"🗺 *أكبر 10 نيازك (قاعدة NASA)*",
+    "meteor_map_famous":"🗺 *نيازك مشهورة*",
+    "flight_title":"🧮 *حاسبة الرحلة*","flight_choose":"اختر وجهتك:",
+    "flight_to":"🚀 إلى *{name}* ({desc})\n\nاختر سرعة مركبتك:",
+    "flight_result_title":"🧮 *نتيجة حاسبة الرحلة*",
+    "flight_from":"📍 من: الأرض  →  {name}","flight_distance":"📏 المسافة: {km} كم",
+    "flight_speed_label":"⚡ السرعة: {name} ({kmh} كم/ساعة)",
+    "flight_time":"🕐 وقت السفر: *{t}*",
+    "flight_another":"🔄 حساب آخر",
+    "flight_grandchildren":"_أحفاد أحفادك سيصلون._",
+    "flight_lightspeed":"_بسرعة الضوء — لا يزال 2.5 مليون سنة!_",
+    "flight_fuel":"_ستحتاج وقوداً بقيمة أكثر من الناتج المحلي للأرض._",
+    "missions_title":"📡 *مهمات فضائية نشطة*","missions_select":"اختر لمعرفة المزيد:",
+    "missions_all":"◀️ كل المهمات","missions_learn":"🔗 اعرف المزيد",
+    "dict_title":"📚 *قاموس الفضاء*","dict_choose":"اختر مصطلحاً:",
+    "dict_funfact":"💡 *حقيقة ممتعة:*",
+    "course_title":"🎓 *علم الفلك في 30 يوماً*",
+    "course_desc":"درس يومي — من المجموعة الشمسية إلى الشبكة الكونية.",
+    "course_subscribe_btn":"🎓 اشترك في الدورة","course_browse_btn":"📚 كل الدروس",
+    "course_already":"🎓 أنت مشترك بالفعل! أنت في اليوم *{day}/30*.\nالدرس القادم في 10:00.",
+    "course_subscribed":"✅ *اشتركت في دورة علم الفلك 30 يوماً!*\n\nإليك الدرس الأول:",
+    "course_all":"📚 *كل 30 درساً*","course_day":"🎓 *اليوم {day}/30 — دورة علم الفلك*",
+    "ach_title":"🏆 *الإنجازات*","ach_earned":"_المكتسبة: {n}/{total}_",
+    "horo_title":"🌌 *برج الفضاء — {d}*",
+    "horo_moon":"القمر:","horo_kp":"مؤشر Kp:","horo_sign":"♾ *برجك اليوم:*",
+    "horo_aurora_high":"🌠 Kp عالٍ: شفق محتمل الليلة!",
+    "horo_energy_high":"🔴 نشاط كوني عالٍ",
+    "horo_energy_mod":"🟡 نشاط كوني معتدل",
+    "horo_energy_calm":"🟢 يوم كوني هادئ",
+    "eq_title_eonet":"🌍 *زلازل NASA EONET (7 أيام)*",
+    "eq_title_usgs":"🌍 *زلازل حديثة M≥5.0 (USGS)*",
+    "eq_subscribe":"🔔 اشترك في التنبيهات",
+    "exo_loading":"🔭 جاري تحميل الاكتشافات...",
+    "exo_title":"🔭 *اكتشافات كواكب جديدة*",
+    "exo_no_data":"لا تتوفر بيانات حديثة من أرشيف NASA.",
+    "exo_total":"إجمالي الكواكب المؤكدة: *5,700+*",
+    "exo_recent":"🔭 *اكتشافات حديثة*",
+    "exo_weekly":"🔔 تنبيهات أسبوعية",
+    "sw_digest_title":"☀️ *ملخص طقس الفضاء*","sw_digest_loading":"☀️ جاري تحميل الملخص...",
+    "cancelled":"❌ تم الإلغاء",
+    "capsule_chars_err":"❌ 5–2000 حرف",
+    "sat_tracker_title":"🛸 *متتبع الأقمار الصناعية*","sat_tracker_choose":"اختر مركبة:",
 },
 }
 # ── End: TRANSLATIONS ─────────────────────────────────────────────────────────
@@ -940,8 +1444,8 @@ def cache_set(key: str, data):
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # BLOCK: TELEGRAM MESSAGE HELPERS (safe_answer, safe_edit, del_msg)             ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
-async def safe_answer(q):
-    try: await q.answer()
+async def safe_answer(q, text=None, show_alert=False):
+    try: await q.answer(text=text, show_alert=show_alert)
     except: pass
 
 async def safe_edit(q, text, reply_markup=None):
@@ -1124,16 +1628,16 @@ def cat_science_kb(lang):
 def cat_live_kb(lang):
     L = lambda k: tx(lang, k)
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(L("btn_solar_wind"),  callback_data="live_solar_wind")],
-        [InlineKeyboardButton(L("btn_kp"),          callback_data="live_kp"),
-         InlineKeyboardButton(L("btn_flares"),      callback_data="live_flares")],
-        [InlineKeyboardButton(L("btn_live_iss"),    callback_data="live_iss"),
-         InlineKeyboardButton(L("btn_radiation"),   callback_data="live_radiation")],
-        [InlineKeyboardButton(L("btn_aurora_f"),    callback_data="live_aurora_forecast"),
-         InlineKeyboardButton(L("btn_geomag"),      callback_data="live_geomagnetic_alert")],
-        [InlineKeyboardButton(L("btn_sunspot"),     callback_data="live_sunspot"),
-         InlineKeyboardButton(L("btn_live_epic"),   callback_data="live_epic_latest")],
-        [InlineKeyboardButton(L("btn_sat_count"),   callback_data="live_satellite_count")],
+        [InlineKeyboardButton(L("btn_solar_wind"),  callback_data="live_solar_wind"),
+         InlineKeyboardButton(L("btn_kp"),          callback_data="live_kp")],
+        [InlineKeyboardButton(L("btn_flares"),      callback_data="live_flares"),
+         InlineKeyboardButton(L("btn_live_iss"),    callback_data="live_iss")],
+        [InlineKeyboardButton(L("btn_radiation"),   callback_data="live_radiation"),
+         InlineKeyboardButton(L("btn_aurora_f"),    callback_data="live_aurora_forecast")],
+        [InlineKeyboardButton(L("btn_geomag"),      callback_data="live_geomagnetic_alert"),
+         InlineKeyboardButton(L("btn_sunspot"),     callback_data="live_sunspot")],
+        [InlineKeyboardButton(L("btn_live_epic"),   callback_data="live_epic_latest"),
+         InlineKeyboardButton(L("btn_sat_count"),   callback_data="live_satellite_count")],
         [InlineKeyboardButton(L("btn_sat_tracker"),  callback_data="satellite_tracker"),
          InlineKeyboardButton(L("btn_earthquakes"),  callback_data="earthquakes")],
         [InlineKeyboardButton(L("btn_sw_digest"),    callback_data="spaceweather_digest"),
@@ -1144,16 +1648,16 @@ def cat_live_kb(lang):
 def cat_interact_kb(lang):
     L = lambda k: tx(lang, k)
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(L("btn_planet_calc"),   callback_data="planet_calc")],
-        [InlineKeyboardButton(L("btn_horoscope"),     callback_data="horoscope_menu")],
-        [InlineKeyboardButton(L("btn_space_name"),    callback_data="space_name")],
-        [InlineKeyboardButton(L("btn_quiz"),          callback_data="quiz_start_menu")],
-        [InlineKeyboardButton(L("btn_poll"),          callback_data="daily_poll")],
-        [InlineKeyboardButton(L("btn_capsule"),       callback_data="capsule_menu")],
-        [InlineKeyboardButton(L("btn_lunar_cal"),     callback_data="lunar_calendar")],
-        [InlineKeyboardButton(L("btn_mars_live"),     callback_data="mars_rover_live")],
-        [InlineKeyboardButton(L("btn_notifications"), callback_data="notifications_menu")],
-        [InlineKeyboardButton(L("btn_nasa_tv"),       callback_data="nasa_tv")],
+        [InlineKeyboardButton(L("btn_planet_calc"),    callback_data="planet_calc"),
+         InlineKeyboardButton(L("btn_horoscope"),      callback_data="horoscope_menu")],
+        [InlineKeyboardButton(L("btn_space_name"),     callback_data="space_name"),
+         InlineKeyboardButton(L("btn_quiz"),           callback_data="quiz_start_menu")],
+        [InlineKeyboardButton(L("btn_poll"),           callback_data="daily_poll"),
+         InlineKeyboardButton(L("btn_capsule"),        callback_data="capsule_menu")],
+        [InlineKeyboardButton(L("btn_lunar_cal"),      callback_data="lunar_calendar"),
+         InlineKeyboardButton(L("btn_mars_live"),      callback_data="mars_rover_live")],
+        [InlineKeyboardButton(L("btn_notifications"),  callback_data="notifications_menu"),
+         InlineKeyboardButton(L("btn_nasa_tv"),        callback_data="nasa_tv")],
         [InlineKeyboardButton(L("btn_challenge"),      callback_data="daily_challenge_start"),
          InlineKeyboardButton(L("btn_rocket_game"),    callback_data="rocket_game")],
         [InlineKeyboardButton(L("btn_daily_horoscope"),callback_data="daily_horoscope"),
@@ -1164,18 +1668,16 @@ def cat_interact_kb(lang):
          InlineKeyboardButton(L("btn_mission_status"), callback_data="mission_status")],
         [InlineKeyboardButton(L("btn_dictionary"),     callback_data="space_dictionary"),
          InlineKeyboardButton(L("btn_course"),         callback_data="course_menu")],
-        [InlineKeyboardButton(L("back_menu"),         callback_data="back")],
+        [InlineKeyboardButton(L("back_menu"),          callback_data="back")],
     ])
 
 def cat_news_kb(lang):
     L = lambda k: tx(lang, k)
     return InlineKeyboardMarkup([
-        # 4 most reliable sources shown in menu
-        [InlineKeyboardButton(L("btn_news_sfn"),         callback_data="news_sfn")],
-        [InlineKeyboardButton(L("btn_news_spacenews"),   callback_data="news_spacenews")],
-        [InlineKeyboardButton(L("btn_news_esa"),         callback_data="news_esa")],
-        [InlineKeyboardButton(L("btn_news_universetoday"), callback_data="news_universetoday")],
-        # Extra sources in second row
+        [InlineKeyboardButton(L("btn_news_sfn"),         callback_data="news_sfn"),
+         InlineKeyboardButton(L("btn_news_spacenews"),   callback_data="news_spacenews")],
+        [InlineKeyboardButton(L("btn_news_esa"),         callback_data="news_esa"),
+         InlineKeyboardButton(L("btn_news_universetoday"), callback_data="news_universetoday")],
         [InlineKeyboardButton(L("btn_news_nasa"),        callback_data="news_nasa"),
          InlineKeyboardButton(L("btn_news_skytel"),      callback_data="news_skytel")],
         [InlineKeyboardButton(L("btn_news_planetary"),   callback_data="news_planetary"),
@@ -1194,6 +1696,7 @@ def news_article_kb(lang, source_key, idx, total, article_link):
     src_row = []
     if article_link:
         src_row.append(InlineKeyboardButton(tx(lang, "btn_news_source"), url=article_link))
+    src_row.append(InlineKeyboardButton(tx(lang, "back_cat"), callback_data="cat_news"))
     src_row.append(InlineKeyboardButton(tx(lang, "back_menu"), callback_data="back"))
     rows.append(src_row)
     return InlineKeyboardMarkup(rows)
@@ -1321,6 +1824,34 @@ HOROSCOPES = {
         "Capricorn":"♑ *Capricorn*\n\nSaturn: structure is key.\n\n🔬 Saturn's rings 100m thick. ⚡ Energy: ██████░░░░ 60%",
         "Aquarius":"♒ *Aquarius*\n\nUranus tilted 98° — unconventional!\n\n🔬 Uranus rotates on its side. ⚡ Energy: ████████░░ 80%",
         "Pisces":"♓ *Pisces*\n\nEnceladus geysers: trust intuition.\n\n🔬 Liquid ocean under Enceladus ice. ⚡ Energy: █████░░░░░ 50%",
+    },
+    "he": {
+        "Aries":"♈ *טלה*\n\nרוח סולארית מתונה. מאדים במיקום טוב — יום לפרויקטים חדשים!\n\n🔬 Kp יציב. ⚡ אנרגיה: ████████░░ 80%",
+        "Taurus":"♉ *שור*\n\nנוגה בפריהליון — זמן לתוכניות ארוכות.\n\n🔬 פעילות סולארית נמוכה. ⚡ אנרגיה: ██████░░░░ 60%",
+        "Gemini":"♊ *תאומים*\n\nשני קטבי אורנוס: היה גמיש!\n\n🔬 סופרנובות באזורך. ⚡ אנרגיה: █████████░ 90%",
+        "Cancer":"♋ *סרטן*\n\nהירח באפוגי — זמן לחשיבה.\n\n🔬 שלבי הירח משפיעים על האיונוספרה. ⚡ אנרגיה: ████░░░░░░ 40%",
+        "Leo":"♌ *אריה*\n\nלהבות מסוג M — אנרגיה מקסימלית!\n\n🔬 ייתכן זוהר הלילה! ⚡ אנרגיה: ██████████ 100%",
+        "Virgo":"♍ *בתולה*\n\nJWST: הפרטים חשובים.\n\n🔬 Webb מצלם כוכבי לכת. ⚡ אנרגיה: ███████░░░ 70%",
+        "Libra":"♎ *מאזניים*\n\nמרכז המסה ארץ-ירח מאוזן.\n\n🔬 LIGO זיהה גלים. ⚡ אנרגיה: ███████░░░ 70%",
+        "Scorpio":"♏ *עקרב*\n\nחומר אפל: כוחות נסתרים אמיתיים.\n\n🔬 27% מהיקום — חומר אפל. ⚡ אנרגיה: ████████░░ 80%",
+        "Sagittarius":"♐ *קשת*\n\nחץ לעבר קשת A*!\n\n🔬 מרכז הגלקסיה מאחורי אבק. ⚡ אנרגיה: █████████░ 90%",
+        "Capricorn":"♑ *גדי*\n\nשבתאי: מבנה זה המפתח.\n\n🔬 טבעות שבתאי בעובי 100 מ'. ⚡ אנרגיה: ██████░░░░ 60%",
+        "Aquarius":"♒ *דלי*\n\nאורנוס נוטה 98° — לא שגרתי!\n\n🔬 אורנוס מסתובב על הצד. ⚡ אנרגיה: ████████░░ 80%",
+        "Pisces":"♓ *דגים*\n\nגייזרים של אנקלדוס: סמוך על האינטואיציה.\n\n🔬 אוקיינוס נוזלי מתחת לקרח. ⚡ אנרגיה: █████░░░░░ 50%",
+    },
+    "ar": {
+        "Aries":"♈ *الحمل*\n\nرياح شمسية معتدلة. المريخ في موقع جيد — يوم لمشاريع جديدة!\n\n🔬 Kp مستقر. ⚡ الطاقة: ████████░░ 80%",
+        "Taurus":"♉ *الثور*\n\nالزهرة في الحضيض — وقت للخطط طويلة.\n\n🔬 نشاط شمسي منخفض. ⚡ الطاقة: ██████░░░░ 60%",
+        "Gemini":"♊ *الجوزاء*\n\nقطبا أورانوس: كن مرناً!\n\n🔬 مستعرات عظمى قريبة. ⚡ الطاقة: █████████░ 90%",
+        "Cancer":"♋ *السرطان*\n\nالقمر في الأوج — وقت للتأمل.\n\n🔬 أطوار القمر تؤثر على الأيونوسفير. ⚡ الطاقة: ████░░░░░░ 40%",
+        "Leo":"♌ *الأسد*\n\nتوهجات من فئة M — طاقة قصوى!\n\n🔬 شفق محتمل الليلة! ⚡ الطاقة: ██████████ 100%",
+        "Virgo":"♍ *العذراء*\n\nJWST: التفاصيل مهمة.\n\n🔬 ويب يصور كواكب خارجية. ⚡ الطاقة: ███████░░░ 70%",
+        "Libra":"♎ *الميزان*\n\nمركز ثقل الأرض-القمر متوازن.\n\n🔬 LIGO رصد موجات. ⚡ الطاقة: ███████░░░ 70%",
+        "Scorpio":"♏ *العقرب*\n\nالمادة المظلمة: القوى الخفية حقيقية.\n\n🔬 27% من الكون مادة مظلمة. ⚡ الطاقة: ████████░░ 80%",
+        "Sagittarius":"♐ *القوس*\n\nسهم نحو القوس A*!\n\n🔬 مركز المجرة خلف الغبار. ⚡ الطاقة: █████████░ 90%",
+        "Capricorn":"♑ *الجدي*\n\nزحل: البنية هي المفتاح.\n\n🔬 حلقات زحل بسمك 100م. ⚡ الطاقة: ██████░░░░ 60%",
+        "Aquarius":"♒ *الدلو*\n\nأورانوس مائل 98° — غير تقليدي!\n\n🔬 أورانوس يدور على جانبه. ⚡ الطاقة: ████████░░ 80%",
+        "Pisces":"♓ *الحوت*\n\nينابيع إنسيلادوس: ثق بحدسك.\n\n🔬 محيط سائل تحت جليد إنسيلادوس. ⚡ الطاقة: █████░░░░░ 50%",
     },
 }
 
@@ -1509,7 +2040,7 @@ async def _send_apod(q, ctx, params=None):
         copy_   = data.get("copyright", "NASA").strip().replace("\n", " ")
         caption = f"🌌 *{title}*\n📅 {d}  |  © {copy_}\n\n{expl}…\n\n[🔗 HD]({hdurl})"
         # Build keyboard with ⭐ Save to favorites button
-        save_btn = InlineKeyboardButton("⭐ Сохранить / Save", callback_data="favorites_save")
+        save_btn = InlineKeyboardButton(tx(lang, "fav_saved").replace("!",""), callback_data="favorites_save")
         if not params:
             kb = InlineKeyboardMarkup([
                 [InlineKeyboardButton(tx(lang, "btn_more_rnd"), callback_data="apod_random"), save_btn],
@@ -1722,7 +2253,7 @@ async def iss_h(update, ctx):
 async def exoplanets_h(update, ctx):
     q = update.callback_query; await safe_answer(q); lang = get_lang(ctx)
     sel  = random.sample(KNOWN_EXOPLANETS, min(4, len(KNOWN_EXOPLANETS)))
-    text = "🔭 *Exoplanets*\n\n"
+    text = tx(lang, "exoplanets_title") + "\n\n"
     for p in sel:
         note = p["note"].get(lang, p["note"]["en"])
         text += (f"🪐 *{p['name']}* — {p['star']}\n"
@@ -1835,7 +2366,7 @@ async def launches_h(update, ctx):
             if launches: cache_set("launches", launches)
         if not launches:
             await safe_edit(q, tx(lang, "no_data"), reply_markup=back_kb(lang, ctx=ctx)); return
-        text = "🚀 *Upcoming Launches*\n\n"
+        text = tx(lang, "launches_title") + "\n\n"
         for i, lc in enumerate(launches[:6], 1):
             if not isinstance(lc, dict): continue
             try:
@@ -1888,11 +2419,7 @@ async def satellites_h(update, ctx):
                          not (s.get("spaceTrack") or {}).get("DECAY_DATE"))
             cache_set("starlink", (total, active))
         except: total = active = "?"
-    text = (f"📡 *Satellites in Orbit*\n\n"
-            f"🌍 Total tracked: ~9,000+\n"
-            f"🛸 *Starlink:* {total} total, {active} active\n"
-            f"🔭 *Other constellations:* OneWeb, GPS, Galileo, GLONASS\n\n"
-            f"[🔗 n2yo.com — live tracking](https://www.n2yo.com)")
+    text = tx(lang, "satellites_text", total=total, active=active)
     sat_imgs = ["satellite orbit earth nasa", "starlink constellation night sky",
                 "GPS satellite earth orbit", "communication satellite deployment space"]
     try:
@@ -1917,7 +2444,7 @@ async def satellites_h(update, ctx):
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def meteors_h(update, ctx):
     q = update.callback_query; await safe_answer(q); lang = get_lang(ctx)
-    text = "🌠 *Meteor Showers*\n\n"
+    text = tx(lang, "meteors_title") + "\n\n"
     for m in METEOR_SHOWERS:
         name = m["name"].get(lang, m["name"]["en"])
         text += f"✨ *{name}* — {m['peak']}\n   ⚡ {m['speed']}  |  🌠 {m['rate']}  |  {m['parent']}\n\n"
@@ -1989,9 +2516,9 @@ async def moon_h(update, ctx):
     emoji, idx, cycle_day, illum = get_moon_phase(date.today())
     phases     = tx(lang, "moon_phases")
     phase_name = phases[idx] if isinstance(phases, list) else "?"
-    text = (f"{emoji} *Moon Phase — {date.today()}*\n\n🌙 *{phase_name}*\n"
+    text = (f"{emoji} {tx(lang, 'moon_title', d=str(date.today()))}\n\n🌙 *{phase_name}*\n"
             f"💡 ~{illum}%  |  Day {cycle_day:.1f}/29.5\n\n"
-            f"📸 Photo tip: ISO 100, f/11, 1/250s")
+            f"{tx(lang, 'moon_photo_tip')}")
     moon_images = ["moon surface nasa apollo", "lunar crater full moon",
                    "moon high resolution nasa", "moon from space ISS", "lunar surface close up"]
     try:
@@ -2016,16 +2543,7 @@ async def moon_h(update, ctx):
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def telescopes_h(update, ctx):
     q = update.callback_query; await safe_answer(q); lang = get_lang(ctx)
-    text = ("🔬 *Space Telescopes*\n\n"
-            "🌌 *JWST* — mirror 6.5m, orbit L2, infrared\n"
-            "🔭 *Hubble* — mirror 2.4m, optical/UV, 600km orbit\n"
-            "📡 *Chandra* — X-ray, high elliptical orbit\n"
-            "🌊 *XMM-Newton* — X-ray, ESA\n"
-            "🔭 *Spitzer* — infrared (retired 2020)\n"
-            "📡 *VLT* — 4×8.2m, Atacama\n"
-            "🌐 *FAST* — 500m radio dish, China\n"
-            "🔭 *ELT (~2028)* — 39m mirror, ESA\n"
-            "🌌 *Roman (~2027)* — wide-field infrared, NASA")
+    text = tx(lang, "telescopes_text")
     tel_imgs = ["James Webb Space Telescope NASA", "Hubble Space Telescope orbit",
                 "Chandra X-ray telescope", "very large telescope ESO",
                 "telescope mirror primary hexagonal", "space observatory nasa"]
@@ -2052,7 +2570,7 @@ async def telescopes_h(update, ctx):
 async def spacefact_h(update, ctx):
     q    = update.callback_query; await safe_answer(q); lang = get_lang(ctx)
     fact = random.choice(SPACE_FACTS.get(lang, SPACE_FACTS["en"]))
-    text = f"⭐ *Space Fact*\n\n{fact}"
+    text = f"{tx(lang, 'spacefact_title')}\n\n{fact}"
     fact_imgs = ["space stars galaxy nasa", "universe deep field", "cosmos stars milky way",
                  "nebula colorful nasa hubble", "star formation space", "galaxy spiral nasa"]
     try:
@@ -2087,13 +2605,13 @@ async def live_solar_wind_h(update, ctx):
         data=r.json(); latest=data[-1] if data else {}
         speed=latest[2] if len(latest)>2 else "?"; density=latest[1] if len(latest)>1 else "?"
         time_str=str(latest[0])[:16].replace("T"," ") if latest else "?"
-        try: spd_f=float(speed); status="🟢 Calm" if spd_f<400 else "🟡 Moderate" if spd_f<600 else "🟠 Strong" if spd_f<800 else "🔴 STORM"
+        try: spd_f=float(speed); status=tx(lang,"sw_calm") if spd_f<400 else tx(lang,"sw_moderate") if spd_f<600 else tx(lang,"sw_strong") if spd_f<800 else tx(lang,"sw_storm")
         except: status="?"
         try: speed=f"{float(speed):,.0f} km/s"
         except: pass
         try: density=f"{float(density):.2f} p/cm³"
         except: pass
-        await safe_edit(q,f"🔴 *LIVE: Solar Wind*\n⏱ {time_str} UTC\n\n{status}\n🚀 {speed}  |  🔵 {density}\n\n[NOAA](https://www.swpc.noaa.gov)",
+        await safe_edit(q,f"{tx(lang,'live_solar_wind_title')}\n⏱ {time_str} UTC\n\n{status}\n🚀 {speed}  |  🔵 {density}\n\n[NOAA](https://www.swpc.noaa.gov)",
             reply_markup=back_kb(lang,"live_solar_wind",ctx))
     except Exception as e:
         await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
@@ -2106,10 +2624,10 @@ async def live_kp_h(update, ctx):
         kp_now=current.get("kp_index",current.get("Kp","?")); time_=current.get("time_tag","")[:16].replace("T"," ")
         try:
             kp_val=float(kp_now)
-            state="🟢 Quiet" if kp_val<4 else "🟡 Minor" if kp_val<5 else "🟠 Moderate" if kp_val<6 else "🔴 Strong" if kp_val<8 else "🚨 G5"
-            aurora="Polar only" if kp_val<4 else "Scandinavia/Canada" if kp_val<6 else "Mid-latitudes" if kp_val<8 else "Equatorial"
+            state=tx(lang,"kp_quiet") if kp_val<4 else tx(lang,"kp_minor") if kp_val<5 else tx(lang,"kp_moderate") if kp_val<6 else tx(lang,"kp_strong") if kp_val<8 else tx(lang,"kp_extreme")
+            aurora=tx(lang,"aurora_polar") if kp_val<4 else tx(lang,"aurora_scandinavia") if kp_val<6 else tx(lang,"aurora_mid") if kp_val<8 else tx(lang,"aurora_equatorial")
         except: state=aurora="?"
-        await safe_edit(q,f"🔴 *LIVE: Kp-index*\n⏱ {time_} UTC\n\nKp: *{kp_now}*  |  {state}\n🌈 Aurora: {aurora}",
+        await safe_edit(q,f"{tx(lang,'live_kp_title')}\n⏱ {time_} UTC\n\nKp: *{kp_now}*  |  {state}\n🌈 Aurora: {aurora}",
             reply_markup=back_kb(lang,"live_kp",ctx))
     except Exception as e:
         await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
@@ -2125,7 +2643,7 @@ async def live_flares_h(update, ctx):
             cls_="🔴 X" if fv>=1e-4 else "🟠 M" if fv>=1e-5 else "🟡 C" if fv>=1e-6 else "🟢 B" if fv>=1e-7 else "⚪ A"
             fs=f"{fv:.2e} W/m²"
         except: cls_="?"; fs=str(flux)
-        await safe_edit(q,f"🔴 *LIVE: Solar Flares*\n⏱ {time_} UTC\n\n⚡ *{cls_}* — `{fs}`",
+        await safe_edit(q,f"{tx(lang,'live_flares_title')}\n⏱ {time_} UTC\n\n⚡ *{cls_}* — `{fs}`",
             reply_markup=back_kb(lang,"live_flares",ctx))
     except Exception as e:
         await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
@@ -2136,7 +2654,7 @@ async def live_iss_h(update, ctx):
         pos=get_iss_position()
         lat,lon,ts=pos["lat"],pos["lon"],pos["ts"]
         iss_c=get_iss_crew()
-        text=(f"🔴 *LIVE: ISS*\n⏱ {ts}\n\n🌍 `{lat:+.4f}°` | 🌏 `{lon:+.4f}°`\n"
+        text=(f"{tx(lang,'live_iss_title')}\n⏱ {ts}\n\n🌍 `{lat:+.4f}°` | 🌏 `{lon:+.4f}°`\n"
               f"⚡ ~27,576 km/h  |  ~408 km\n👨‍🚀 {', '.join(iss_c) or tx(lang,'iss_no_crew')}\n\n"
               f"[{tx(lang,'iss_map')}](https://www.google.com/maps?q={lat},{lon})")
         await safe_edit(q,text,reply_markup=back_kb(lang,"live_iss",ctx))
@@ -2154,7 +2672,7 @@ async def live_radiation_h(update, ctx):
             rl="🚨 S5" if fp>=1e4 else "🔴 S4" if fp>=1e3 else "🟠 S3" if fp>=1e2 else "🟡 S2" if fp>=10 else "🟢 S1" if fp>=1 else "⚪ BG"
             fs=f"{fp:.2e} p/(cm²·s·sr)"
         except: rl="?"; fs=str(flux_p)
-        await safe_edit(q,f"🔴 *LIVE: Radiation*\n⏱ {time_p} UTC\n\n☢️ `{fs}`\n🌡 *{rl}*",
+        await safe_edit(q,f"{tx(lang,'live_radiation_title')}\n⏱ {time_p} UTC\n\n☢️ `{fs}`\n🌡 *{rl}*",
             reply_markup=back_kb(lang,"live_radiation",ctx))
     except Exception as e:
         await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
@@ -2167,9 +2685,9 @@ async def live_aurora_h(update, ctx):
         kp=current.get("kp_index",current.get("Kp","?")); time_=current.get("time_tag","")[:16].replace("T"," ")
         try:
             kp_val=float(kp)
-            forecast=("🌈 Mid-latitudes (Moscow, Kyiv)" if kp_val>=7 else "🌈 Scandinavia, Canada, Alaska" if kp_val>=5 else "🌈 Near polar circle" if kp_val>=4 else "🌈 Polar regions only")
+            forecast=("🌈 "+tx(lang,"aurora_mid")) if kp_val>=7 else ("🌈 "+tx(lang,"aurora_scandinavia")) if kp_val>=5 else ("🌈 "+tx(lang,"aurora_polar")) if kp_val>=4 else ("🌈 "+tx(lang,"aurora_polar"))
         except: forecast="?"
-        await safe_edit(q,f"🔴 *Aurora Forecast*\n⏱ {time_} UTC\n\nKp: *{kp}*\n{forecast}",
+        await safe_edit(q,f"{tx(lang,'live_aurora_title')}\n⏱ {time_} UTC\n\nKp: *{kp}*\n{forecast}",
             reply_markup=back_kb(lang,"live_aurora_forecast",ctx))
     except Exception as e:
         await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
@@ -2179,7 +2697,7 @@ async def live_geomag_h(update, ctx):
     try:
         end=date.today().isoformat(); start=(date.today()-timedelta(days=2)).isoformat()
         storms=nasa_req("/DONKI/GST",{"startDate":start,"endDate":end}) or []
-        text=f"🔴 *Geomagnetic Storms (2d)*\n\nEvents: *{len(storms)}*\n\n"
+        text=f"{tx(lang,'live_geomag_title')}\n\nEvents: *{len(storms)}*\n\n"
         for s in (storms[-5:] if storms else []):
             t=(s.get("startTime") or "?")[:16].replace("T"," ")
             kp_i=s.get("allKpIndex",[{}]); kp_v=kp_i[-1].get("kpIndex","?") if kp_i else "?"
@@ -2194,7 +2712,7 @@ async def live_sunspot_h(update, ctx):
     try:
         r=requests.get("https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json",timeout=12); r.raise_for_status()
         data=r.json(); latest=data[-1] if data else {}; ssn=latest.get("smoothed_ssn",latest.get("ssn","?"))
-        await safe_edit(q,f"🔴 *Sunspots (Cycle 25)*\n\nWolf number: *{ssn}*\n\nCycle 25 near maximum — more flares.",
+        await safe_edit(q,f"{tx(lang,'live_sunspot_title')}\n\n{tx(lang,'live_sunspot_text',ssn=ssn)}",
             reply_markup=back_kb(lang,"live_sunspot",ctx))
     except Exception as e:
         await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
@@ -2207,7 +2725,7 @@ async def live_epic_h(update, ctx):
             await safe_edit(q,tx(lang,"no_img"),reply_markup=back_kb(lang,ctx=ctx)); return
         item=data[0]; date_str=item.get("date","")[:10].replace("-","/"); img=item.get("image","")
         url=f"https://epic.gsfc.nasa.gov/archive/natural/{date_str}/png/{img}.png"
-        caption=f"🌍 *EPIC Live — Earth*\n📅 {date_str}\n\nDSCOVR satellite (L1)."
+        caption=f"{tx(lang,'live_epic_title')}\n📅 {date_str}\n\n{tx(lang,'live_epic_desc')}"
         await del_msg(q)
         try:
             await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=url,caption=caption,
@@ -2224,7 +2742,7 @@ async def live_sat_count_h(update, ctx):
         sl=get_json("https://api.spacexdata.com/v4/starlink",timeout=10)
         total=len(sl); active=sum(1 for s in sl if isinstance(s,dict) and not (s.get("spaceTrack") or {}).get("DECAY_DATE"))
     except: total=active="?"
-    await safe_edit(q,f"🔴 *Starlink*\n\nTotal: *{total}*  |  Active: *{active}*\n\nAll satellites: ~9,000+ in orbit.",
+    await safe_edit(q,tx(lang,"live_starlink_title",total=total,active=active),
         reply_markup=back_kb(lang,"live_satellite_count",ctx))
 # ── End: LIVE HANDLERS ────────────────────────────────────────────────────────
 
@@ -2285,14 +2803,14 @@ async def planet_weight_received(update, ctx):
         return PLANET_WEIGHT
     bday=ctx.user_data.get("planet_bday"); today=date.today()
     age_days=(today-bday).days
-    lines=["🪐 *Planet Calculator*\n"]
-    lines.append(f"🌍 *Earth:* {age_days/365.25:.1f} yrs  |  {weight:.1f} kg\n")
+    lines=[tx(lang,"planet_calc_title")+"\n"]
+    lines.append(tx(lang,"planet_calc_earth",age=f"{age_days/365.25:.1f}",weight=f"{weight:.1f}")+"\n")
     for pname,gravity in PLANET_GRAVITY.items():
         if pname=="🌍 Earth": continue
         age_p=age_days/PLANET_YEAR_DAYS[pname]; w_p=weight*gravity
         lines.append(f"{pname}: *{age_p:.1f} yrs*  |  ⚖️ *{w_p:.1f} kg*")
-    lines.append(f"\n🌙 *Moon:* ⚖️ {weight*0.165:.1f} kg (16.5% gravity)")
-    lines.append(f"\n💡 You've lived *{age_days:,}* Earth days!")
+    lines.append("\n"+tx(lang,"planet_calc_moon",w=f"{weight*0.165:.1f}"))
+    lines.append("\n"+tx(lang,"planet_calc_days",days=f"{age_days:,}"))
     kb=InlineKeyboardMarkup([[
         InlineKeyboardButton(tx(lang,"cat_interact_btn"),callback_data="cat_interact"),
         InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")
@@ -2357,12 +2875,12 @@ async def capsule_msg_received(update, ctx):
     lang=ctx.user_data.get("capsule_lang","ru")
     user_msg=update.message.text.strip()
     if len(user_msg)<5 or len(user_msg)>2000:
-        await update.message.reply_text("❌ 5–2000 chars"); return CAPSULE_MSG
+        await update.message.reply_text(tx(lang,"capsule_chars_err")); return CAPSULE_MSG
     deliver_on=(date.today()+timedelta(days=365)).isoformat()
     capsules=load_capsules()
     capsules.append({"chat_id":update.effective_chat.id,"message":user_msg,"deliver_on":deliver_on,"created_at":date.today().isoformat()})
     save_capsules(capsules)
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
     await update.message.reply_text(tx(lang,"capsule_saved",date=deliver_on),parse_mode="Markdown",reply_markup=kb)
     return ConversationHandler.END
 
@@ -2390,7 +2908,7 @@ async def quiz_next_h(update, ctx):
     q_text=question["q"].get(lang,question["q"]["en"])
     opts_txt="\n".join(f"{chr(65+i)}. {opt}" for i,opt in enumerate(question["options"]))
     ctx.user_data["quiz_answered"]=False
-    await safe_edit(q,f"🧠 *Question {qi+1}/10*\n\n{q_text}\n\n{opts_txt}",reply_markup=quiz_kb(lang,qi))
+    await safe_edit(q,f"{tx(lang,'quiz_question_title',n=qi+1)}\n\n{q_text}\n\n{opts_txt}",reply_markup=quiz_kb(lang,qi))
 
 async def quiz_answer_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -2434,8 +2952,8 @@ async def space_name_h(update, ctx):
     const=random.choice(["Orion","Lyra","Cygnus","Perseus","Aquila","Centaurus","Vela"])
     spec=random.choice(["G2V ☀️","K5V 🟠","M4V 🔴","F8V 🟡","A1V 🔵"]); dist=random.randint(10,9999)
     random.seed()
-    text=(tx(lang,"name_gen_title")+f"👨‍🚀 *Callsign:*\n`{callsign}`\n\n⭐ *Your star:*\n`{star_name}`\n"
-          f"📡 Constellation: {const}  |  Spectral: {spec}\n📍 Distance: {dist} light-years")
+    text=(tx(lang,"name_gen_title")+f"{tx(lang,'name_callsign')}\n`{callsign}`\n\n{tx(lang,'name_star')}\n`{star_name}`\n"
+          f"{tx(lang,'name_constellation',c=const,s=spec)}\n{tx(lang,'name_distance',d=str(dist))}")
     await safe_edit(q,text,reply_markup=back_kb(lang,"space_name",ctx))
 
 async def daily_poll_h(update, ctx):
@@ -2460,11 +2978,11 @@ async def mars_rover_live_h(update, ctx):
             r=requests.get(f"{NASA_BASE}/mars-photos/api/v1/manifests/{rover}",params={"api_key":NASA_API_KEY},timeout=10)
             if r.status_code==200:
                 m=r.json().get("photo_manifest",{})
-                status_e="🟢 Active" if m.get("status")=="active" else "⚪ Inactive"
+                status_e=tx(lang,"rover_active") if m.get("status")=="active" else tx(lang,"rover_inactive")
                 text+=(f"🤖 *{m.get('name',rover.title())}* — {status_e}\n"
-                       f"   🛬 Landing: {m.get('landing_date','?')}\n"
-                       f"   ☀️ Sol: {m.get('max_sol',0)}  |  📅 {m.get('max_date','?')}\n"
-                       f"   📷 Photos: {m.get('total_photos',0):,}\n\n")
+                       f"   {tx(lang,'rover_landing')} {m.get('landing_date','?')}\n"
+                       f"   {tx(lang,'rover_sol')} {m.get('max_sol',0)}  |  📅 {m.get('max_date','?')}\n"
+                       f"   {tx(lang,'rover_photos')} {m.get('total_photos',0):,}\n\n")
         except: continue
     text+="📍 [Mars Trek Map](https://trek.nasa.gov/mars/)"
     await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"mars_rover_live",ctx))
@@ -2932,18 +3450,18 @@ MISSIONS_DATA = [
 
 # ── Система достижений (12 значков) ───────────────────────────────────────────
 ACHIEVEMENTS_DEF = [
-    {"id":"first_apod",   "emoji":"🌅","ru":"Первый APOD",       "en":"First APOD",       "condition":"apod>=1"},
-    {"id":"apod10",       "emoji":"📸","ru":"10 снимков NASA",   "en":"10 NASA Photos",   "condition":"apod>=10"},
-    {"id":"apod50",       "emoji":"🏅","ru":"50 снимков NASA",   "en":"50 NASA Photos",   "condition":"apod>=50"},
-    {"id":"first_quiz",   "emoji":"🧠","ru":"Первый квиз",       "en":"First Quiz",       "condition":"quiz>=1"},
-    {"id":"quiz_perfect", "emoji":"🏆","ru":"Квиз без ошибок",   "en":"Perfect Quiz",     "condition":"quiz_perfect>=1"},
-    {"id":"explorer",     "emoji":"🚀","ru":"Исследователь",     "en":"Explorer",         "condition":"sections>=5"},
-    {"id":"mars_fan",     "emoji":"🔴","ru":"Фанат Марса",       "en":"Mars Fan",         "condition":"mars>=3"},
-    {"id":"news_reader",  "emoji":"📰","ru":"Читатель новостей", "en":"News Reader",      "condition":"news>=5"},
-    {"id":"week_streak",  "emoji":"🔥","ru":"7 дней подряд",     "en":"7-Day Streak",     "condition":"streak>=7"},
-    {"id":"challenge_win","emoji":"🎯","ru":"Первый челлендж",   "en":"First Challenge",  "condition":"challenge>=1"},
-    {"id":"favorite5",    "emoji":"⭐","ru":"5 избранных",       "en":"5 Favorites",      "condition":"favorites>=5"},
-    {"id":"night_owl",    "emoji":"🦉","ru":"Ночной наблюдатель","en":"Night Owl",        "condition":"night_session>=1"},
+    {"id":"first_apod",   "emoji":"🌅","ru":"Первый APOD",       "en":"First APOD",       "he":"APOD ראשון",      "ar":"أول APOD",         "condition":"apod>=1"},
+    {"id":"apod10",       "emoji":"📸","ru":"10 снимков NASA",   "en":"10 NASA Photos",   "he":"10 תמונות NASA",  "ar":"10 صور NASA",      "condition":"apod>=10"},
+    {"id":"apod50",       "emoji":"🏅","ru":"50 снимков NASA",   "en":"50 NASA Photos",   "he":"50 תמונות NASA",  "ar":"50 صورة NASA",     "condition":"apod>=50"},
+    {"id":"first_quiz",   "emoji":"🧠","ru":"Первый квиз",       "en":"First Quiz",       "he":"חידון ראשון",     "ar":"أول اختبار",       "condition":"quiz>=1"},
+    {"id":"quiz_perfect", "emoji":"🏆","ru":"Квиз без ошибок",   "en":"Perfect Quiz",     "he":"חידון מושלם",     "ar":"اختبار مثالي",     "condition":"quiz_perfect>=1"},
+    {"id":"explorer",     "emoji":"🚀","ru":"Исследователь",     "en":"Explorer",         "he":"חוקר",            "ar":"مستكشف",           "condition":"sections>=5"},
+    {"id":"mars_fan",     "emoji":"🔴","ru":"Фанат Марса",       "en":"Mars Fan",         "he":"חובב מאדים",      "ar":"محب المريخ",       "condition":"mars>=3"},
+    {"id":"news_reader",  "emoji":"📰","ru":"Читатель новостей", "en":"News Reader",      "he":"קורא חדשות",      "ar":"قارئ الأخبار",     "condition":"news>=5"},
+    {"id":"week_streak",  "emoji":"🔥","ru":"7 дней подряд",     "en":"7-Day Streak",     "he":"7 ימים ברצף",     "ar":"7 أيام متواصلة",   "condition":"streak>=7"},
+    {"id":"challenge_win","emoji":"🎯","ru":"Первый челлендж",   "en":"First Challenge",  "he":"אתגר ראשון",      "ar":"أول تحدي",         "condition":"challenge>=1"},
+    {"id":"favorite5",    "emoji":"⭐","ru":"5 избранных",       "en":"5 Favorites",      "he":"5 מועדפים",       "ar":"5 مفضلات",         "condition":"favorites>=5"},
+    {"id":"night_owl",    "emoji":"🦉","ru":"Ночной наблюдатель","en":"Night Owl",        "he":"ינשוף לילה",      "ar":"بومة الليل",       "condition":"night_session>=1"},
 ]
 
 # ── Ежедневный челлендж (20 объектов) ─────────────────────────────────────────
@@ -3088,7 +3606,7 @@ def challenge_kb(lang, q_idx, answered=False):
     q=CHALLENGE_DATA[q_idx]
     if answered:
         return InlineKeyboardMarkup([[
-            InlineKeyboardButton("🎯 Next challenge",callback_data="daily_challenge_start"),
+            InlineKeyboardButton(tx(lang,"challenge_next"),callback_data="daily_challenge_start"),
             InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back"),
         ]])
     rows=[[InlineKeyboardButton(f"{chr(65+i)}. {opt[:30]}",callback_data=f"challenge_ans_{q_idx}_{i}")] for i,opt in enumerate(q["options"])]
@@ -3099,16 +3617,15 @@ def dict_kb(lang):
     rows=[]
     items=[(k,v) for k,v in SPACE_DICT.items()]
     for i in range(0,len(items),3):
-        row=[InlineKeyboardButton(v["emoji"]+" "+(v["ru"][0] if lang=="ru" else v["en"][0])[:14],callback_data=f"dict_{k}") for k,v in items[i:i+3]]
+        row=[InlineKeyboardButton(v["emoji"]+" "+v.get(lang,v["en"])[0][:14],callback_data=f"dict_{k}") for k,v in items[i:i+3]]
         rows.append(row)
     rows.append([InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")])
     return InlineKeyboardMarkup(rows)
 
 def course_kb(lang):
-    cp=load_course(); cid_str="self"
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎓 Подписаться на курс",callback_data="course_subscribe")],
-        [InlineKeyboardButton("📚 Просмотреть все уроки",callback_data="course_browse")],
+        [InlineKeyboardButton(tx(lang,"course_subscribe_btn"),callback_data="course_subscribe")],
+        [InlineKeyboardButton(tx(lang,"course_browse_btn"),callback_data="course_browse")],
         [InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")],
     ])
 # ── End: NEW KEYBOARDS ────────────────────────────────────────────────────────
@@ -3166,7 +3683,7 @@ def _check_new_achievements(chat_id, s):
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def satellite_tracker_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
-    await safe_edit(q,"🛸 *Satellite Tracker*\n\nSelect a spacecraft:",reply_markup=satellite_kb(lang))
+    await safe_edit(q,f"{tx(lang,'sat_tracker_title')}\n\n{tx(lang,'sat_tracker_choose')}",reply_markup=satellite_kb(lang))
 
 async def sat_detail_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -3201,7 +3718,7 @@ async def sat_detail_h(update, ctx):
 # BLOCK: EARTHQUAKE / EONET HANDLER                                              ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def earthquakes_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🌍 Loading...")
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🌍...")
     try:
         r=requests.get("https://eonet.gsfc.nasa.gov/api/v3/events?category=earthquakes&limit=10&status=open&days=7",timeout=12)
         r.raise_for_status(); events=r.json().get("events",[])
@@ -3212,7 +3729,7 @@ async def earthquakes_h(update, ctx):
         try:
             r=requests.get("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/5.0_week.geojson",timeout=12)
             feats=r.json().get("features",[])[:8]
-            lines=["🌍 *Recent Earthquakes M≥5.0 (USGS)*\n"]
+            lines=[tx(lang,"eq_title_usgs")+"\n"]
             for f in feats:
                 p=f["properties"]; c=f["geometry"]["coordinates"]
                 mag=p.get("mag","?"); place=p.get("place","?")[:40]
@@ -3223,7 +3740,7 @@ async def earthquakes_h(update, ctx):
         except Exception as e:
             text=f"❌ Could not load earthquake data: {e}"
     else:
-        lines=["🌍 *NASA EONET Earthquakes (7 days)*\n"]
+        lines=[tx(lang,"eq_title_eonet")+"\n"]
         for ev in events[:8]:
             title=ev.get("title","?"); geom=ev.get("geometry",[{}])
             coords=geom[0].get("coordinates",[0,0,0]) if geom else [0,0,0]
@@ -3231,7 +3748,7 @@ async def earthquakes_h(update, ctx):
             lat,lon=coords[1],coords[0]
             lines.append(f"⚡ *{title}*\n   📅 {date_ev} | [Map](https://www.google.com/maps?q={lat},{lon})\n")
         text="\n".join(lines)[:4096]
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔔 Subscribe alerts",callback_data="notif_toggle_earthquakes"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"eq_subscribe"),callback_data="notif_toggle_earthquakes"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
     await safe_edit(q,text,reply_markup=kb)
 
 async def job_earthquake_alert(context):
@@ -3256,7 +3773,7 @@ async def job_earthquake_alert(context):
 # BLOCK: SPACEWEATHER DIGEST                                                     ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def spaceweather_digest_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"☀️ Loading digest...")
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,tx(lang,"sw_digest_loading"))
     sections=[]
     # 1. Kp index
     try:
@@ -3281,7 +3798,7 @@ async def spaceweather_digest_h(update, ctx):
     # 4. Moon
     emoji,_,_,illum=get_moon_phase(date.today())
     sections.append(f"{emoji} *Moon:* {illum}% illuminated")
-    text=(f"☀️ *Space Weather Digest*\n📅 {date.today().strftime('%d %b %Y')}\n\n"+"\n".join(sections)+
+    text=(f"{tx(lang,'sw_digest_title')}\n📅 {date.today().strftime('%d %b %Y')}\n\n"+"\n".join(sections)+
           "\n\n[🔗 NOAA SWPC](https://www.swpc.noaa.gov)")
     await safe_edit(q,text,reply_markup=back_kb(lang,"spaceweather_digest",ctx))
 
@@ -3305,7 +3822,7 @@ async def job_spaceweather_digest(context):
 # BLOCK: EXOPLANET ALERT HANDLER + SCHEDULED JOB                                ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def exoplanet_alert_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔭 Loading discoveries...")
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,tx(lang,"exo_loading"))
     try:
         # NASA Exoplanet Archive — confirmed planets in the last 30 days
         r=requests.get(
@@ -3314,12 +3831,12 @@ async def exoplanet_alert_h(update, ctx):
         planets=r.json() if r.status_code==200 else []
     except: planets=[]
     if not planets:
-        text=("🔭 *New Exoplanet Discoveries*\n\n"
-              "No recent data available from NASA Archive.\n\n"
-              "Total confirmed exoplanets: *5,700+*\n"
-              "[NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu)")
+        text=(f"{tx(lang,'exo_title')}\n\n"
+              f"{tx(lang,'exo_no_data')}\n\n"
+              f"{tx(lang,'exo_total')}\n"
+              f"[NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu)")
     else:
-        text="🔭 *Recent Exoplanet Discoveries*\n\n"
+        text=tx(lang,"exo_recent")+"\n\n"
         for p in planets[:8]:
             name=p.get("pl_name","?"); method=p.get("discoverymethod","?")
             dist=p.get("st_dist","?"); period=p.get("pl_orbper","?")
@@ -3328,7 +3845,7 @@ async def exoplanet_alert_h(update, ctx):
             try: period=f"{float(period):.1f} days"
             except: period=str(period)
             text+=f"🪐 *{name}*\n   Method: {method} | Period: {period} | Dist: {dist}\n\n"
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔔 Weekly alerts",callback_data="notif_toggle_exoplanets"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"exo_weekly"),callback_data="notif_toggle_exoplanets"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
     await safe_edit(q,text[:4096],reply_markup=kb)
 
 async def job_exoplanet_alert(context):
@@ -3354,12 +3871,12 @@ async def achievements_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     cid=str(q.message.chat_id); ach=load_achievements()
     earned=ach.get(cid,{}).get("earned",[])
-    lines=["🏆 *Achievements*\n"]
+    lines=[tx(lang,"ach_title")+"\n"]
     for badge in ACHIEVEMENTS_DEF:
         got=badge["id"] in earned
-        name=badge["ru"] if lang=="ru" else badge["en"]
+        name=badge.get(lang, badge["en"])
         lines.append(f"{'✅' if got else '🔒'} {badge['emoji']} {name}")
-    lines.append(f"\n_Earned: {len(earned)}/{len(ACHIEVEMENTS_DEF)}_")
+    lines.append("\n"+tx(lang,"ach_earned",n=len(earned),total=len(ACHIEVEMENTS_DEF)))
     await safe_edit(q,"\n".join(lines),reply_markup=back_kb(lang,"cat_interact",ctx))
 # ── End: ACHIEVEMENTS HANDLER ─────────────────────────────────────────────────
 
@@ -3380,9 +3897,9 @@ async def daily_horoscope_h(update, ctx):
     # Star sign based on today's date as "birthday"
     today=date.today(); sign=get_zodiac(today.month,today.day)
     # Cosmic energy based on Kp + moon
-    if kp>=7 or moon_idx==4: energy="🔴 High cosmic activity"
-    elif kp>=4 or moon_idx in (2,6): energy="🟡 Moderate cosmic activity"
-    else: energy="🟢 Calm cosmic day"
+    if kp>=7 or moon_idx==4: energy=tx(lang,"horo_energy_high")
+    elif kp>=4 or moon_idx in (2,6): energy=tx(lang,"horo_energy_mod")
+    else: energy=tx(lang,"horo_energy_calm")
     DAILY_ADVICE={
         "ru":["Идеальный день для новых начинаний","Время для размышлений","Обрати взгляд на звёзды","Сила Вселенной на твоей стороне","День открытий и чудес"],
         "en":["Perfect day for new beginnings","Time for reflection","Look up to the stars","The universe's force is with you","A day of discoveries"],
@@ -3391,12 +3908,12 @@ async def daily_horoscope_h(update, ctx):
     }
     seed=today.toordinal()%len(DAILY_ADVICE["en"])
     advice=DAILY_ADVICE.get(lang,DAILY_ADVICE["en"])[seed]
-    text=(f"🌌 *Space Horoscope — {today.strftime('%d %b %Y')}*\n\n"
-          f"{moon_emoji} *Moon:* {moon_illum}% | Day {moon_day}/30\n"
-          f"⚡ *Kp-index:* {kp:.1f}  |  {energy}\n\n"
-          f"♾ *Your sign today:* {sign}\n"
+    text=(f"{tx(lang,'horo_title',d=today.strftime('%d %b %Y'))}\n\n"
+          f"{moon_emoji} *{tx(lang,'horo_moon')}* {moon_illum}% | Day {moon_day}/30\n"
+          f"⚡ *{tx(lang,'horo_kp')}* {kp:.1f}  |  {energy}\n\n"
+          f"{tx(lang,'horo_sign')} {sign}\n"
           f"✨ _{advice}_\n\n"
-          f"{'🌠 High Kp: Aurora possible tonight!' if kp>=4 else ''}")
+          f"{tx(lang,'horo_aurora_high') if kp>=4 else ''}")
     await safe_edit(q,text.strip(),reply_markup=back_kb(lang,"daily_horoscope",ctx))
 # ── End: DAILY HOROSCOPE ──────────────────────────────────────────────────────
 
@@ -3409,17 +3926,23 @@ async def daily_challenge_start(update, ctx):
     q_idx=date.today().toordinal()%len(CHALLENGE_DATA)
     ctx.user_data["challenge_q"]=q_idx; ctx.user_data["challenge_answered"]=False
     chall=CHALLENGE_DATA[q_idx]
-    await safe_edit(q,"⏳ Loading challenge image...")
-    await del_msg(q)
+    await safe_edit(q,tx(lang,"challenge_loading"))
+    caption=f"{tx(lang,'challenge_title')}\n\n{tx(lang,'challenge_question')}"
     try:
-        img=nasa_image_search(chall["img_q"],1)
-        caption=f"🎯 *Daily Challenge*\n\n❓ *What is this object?*"
-        await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img,caption=caption,
-            parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
-    except:
-        await ctx.bot.send_message(chat_id=q.message.chat_id,
-            text=f"🎯 *Daily Challenge*\n\n❓ *What is this object?*",
-            parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
+        r=requests.get("https://images-api.nasa.gov/search",
+            params={"q":chall["img_q"],"media_type":"image","page_size":10},timeout=12)
+        items=[it for it in r.json().get("collection",{}).get("items",[]) if it.get("links")]
+        if items:
+            img_url=(random.choice(items[:8]).get("links",[{}])[0]).get("href","")
+            if img_url:
+                await del_msg(q)
+                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
+                    caption=caption,parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
+                return
+    except: pass
+    await del_msg(q)
+    await ctx.bot.send_message(chat_id=q.message.chat_id,
+        text=caption,parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
 
 async def challenge_answer_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -3427,8 +3950,8 @@ async def challenge_answer_h(update, ctx):
     chall=CHALLENGE_DATA[q_idx]; correct=chall["answer"]; is_right=(ans==correct)
     update_stats(q.message.chat_id,"challenge",1)
     if is_right: update_stats(q.message.chat_id,"sections",1)
-    result="✅ Correct!" if is_right else f"❌ Wrong! Answer: *{chall['options'][correct]}*"
-    text=f"🎯 *Challenge Result*\n\n{result}\n\n💡 _{chall['fact']}_"
+    result=tx(lang,"challenge_correct") if is_right else tx(lang,"challenge_wrong",ans=chall['options'][correct])
+    text=f"{tx(lang,'challenge_result_title')}\n\n{result}\n\n💡 _{chall['fact']}_"
     await safe_edit(q,text,reply_markup=challenge_kb(lang,q_idx,answered=True))
 # ── End: DAILY CHALLENGE ──────────────────────────────────────────────────────
 
@@ -3459,13 +3982,13 @@ async def rocket_game_start(update, ctx):
 
 async def _show_rocket_step(q,ctx,step_idx):
     s=ROCKET_STEPS[step_idx]; lang=get_lang(ctx)
-    text=(f"🚀 *Falcon 9 Landing Simulator*\n"
-          f"━━ Step {step_idx+1}/{len(ROCKET_STEPS)} ━━\n\n"
+    text=(f"{tx(lang,'rocket_title')}\n"
+          f"{tx(lang,'rocket_step_label',n=step_idx+1,total=len(ROCKET_STEPS))}\n\n"
           f"📍 Alt: *{s['alt']} km*  |  💨 Speed: *{s['vel']} m/s*  |  ⛽ Fuel: *{s['fuel']}%*\n\n"
           f"_{s['desc']}_\n\n"
-          f"*What do you do?*")
+          f"{tx(lang,'rocket_what_do')}")
     rows=[[InlineKeyboardButton(f"{k}. {v[0]}",callback_data=f"rocket_choice_{step_idx}_{k}")] for k,v in s["choices"].items()]
-    rows.append([InlineKeyboardButton("❌ Abort mission",callback_data="back")])
+    rows.append([InlineKeyboardButton(tx(lang,"rocket_abort"),callback_data="back")])
     await safe_edit(q,text,reply_markup=InlineKeyboardMarkup(rows))
 
 async def rocket_choice_h(update, ctx):
@@ -3473,26 +3996,26 @@ async def rocket_choice_h(update, ctx):
     parts=q.data.split("_"); step_idx=int(parts[2]); choice=parts[3]
     s=ROCKET_STEPS[step_idx]; is_correct=s["choices"][choice][1]
     if not is_correct:
-        text=(f"💥 *BOOOM!*\n\n"
-              f"❌ Wrong call at step {step_idx+1}.\n"
+        text=(f"{tx(lang,'rocket_boom')}\n\n"
+              f"{tx(lang,'rocket_wrong_call',n=step_idx+1)}\n"
               f"💡 _{s['hint']}_\n\n"
-              f"The Falcon 9 crashed into the drone ship. Try again!\n🔧 SpaceX calls this a 'rapid unscheduled disassembly'.")
-        kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔄 Try again",callback_data="rocket_game"),InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+              f"{tx(lang,'rocket_crashed')}\n{tx(lang,'rocket_rsd')}")
+        kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"rocket_try_again"),callback_data="rocket_game"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
         await safe_edit(q,text,reply_markup=kb)
         return ConversationHandler.END
     next_step=step_idx+1
     if next_step>=len(ROCKET_STEPS):
-        text=("🎉 *TOUCHDOWN! PERFECT LANDING!*\n\n"
-              "✅ Falcon 9 successfully landed on the drone ship!\n"
-              "⛽ Fuel remaining: 3%  |  Speed at touchdown: 2 m/s\n\n"
-              "🏅 You've mastered the Falcon 9 landing algorithm.\n"
-              "_SpaceX does this routinely since 2015!_")
+        text=(f"{tx(lang,'rocket_touchdown')}\n\n"
+              f"{tx(lang,'rocket_landed')}\n"
+              f"{tx(lang,'rocket_fuel')}\n\n"
+              f"{tx(lang,'rocket_mastered')}\n"
+              f"{tx(lang,'rocket_since2015')}")
         update_stats(q.message.chat_id,"sections",1)
-        kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔄 Play again",callback_data="rocket_game"),InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+        kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"rocket_play_again"),callback_data="rocket_game"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
         await safe_edit(q,text,reply_markup=kb)
         return ConversationHandler.END
     ctx.user_data["rocket_step"]=next_step
-    text=f"✅ *Good call!*\n_{s['hint']}_\n\n➡️ Next step..."
+    text=f"{tx(lang,'rocket_good_call')}\n_{s['hint']}_\n\n{tx(lang,'rocket_next')}"
     await safe_edit(q,text)
     await _show_rocket_step(q,ctx,next_step)
     return ROCKET_STEP
@@ -3518,10 +4041,10 @@ async def qa_answer(update, ctx):
     lang=ctx.user_data.get("qa_lang","en")
     question=update.message.text.strip()
     if len(question)<3 or len(question)>500:
-        await update.message.reply_text("❌ 3–500 chars"); return QA_QUESTION
-    thinking=await update.message.reply_text("🤔 Thinking...")
+        await update.message.reply_text(tx(lang,"qa_chars_error")); return QA_QUESTION
+    thinking=await update.message.reply_text(tx(lang,"qa_thinking"))
     if not ANTHROPIC_API_KEY:
-        await thinking.edit_text("❌ Claude API key not configured. Add ANTHROPIC_API_KEY to env.")
+        await thinking.edit_text(tx(lang,"qa_api_error"))
         return ConversationHandler.END
     try:
         sys_prompt=f"You are an expert astronomer and space scientist. Answer in {lang} language. Be concise (max 300 words), accurate, and engaging. Use emojis sparingly. End with one fascinating related fact."
@@ -3533,13 +4056,14 @@ async def qa_answer(update, ctx):
     except Exception as e:
         answer=f"❌ Error: {e}"
     update_stats(update.effective_chat.id,"sections",1)
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("❓ Ask another",callback_data="space_qa"),InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"qa_ask_another"),callback_data="space_qa"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
     await thinking.edit_text(f"🔭 *Q: {question[:60]}...*\n\n{answer}"[:4096],
         parse_mode="Markdown",reply_markup=kb)
     return ConversationHandler.END
 
 async def qa_cancel(update, ctx):
-    await update.message.reply_text("Cancelled."); return ConversationHandler.END
+    lang=ctx.user_data.get("qa_lang","en")
+    await update.message.reply_text(tx(lang,"cancelled")); return ConversationHandler.END
 # ── End: CLAUDE API Q&A ───────────────────────────────────────────────────────
 
 
@@ -3548,13 +4072,13 @@ async def qa_cancel(update, ctx):
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def favorites_save_h(update, ctx):
     """Called when user taps ⭐ Save on APOD. Data passed via ctx.user_data."""
-    q=update.callback_query; await safe_answer(q,"⭐ Saved!",show_alert=False); lang=get_lang(ctx)
+    q=update.callback_query; lang=get_lang(ctx); await safe_answer(q,tx(lang,"fav_saved"),show_alert=False)
     apod_data=ctx.user_data.get("last_apod",{})
     if not apod_data: return
     cid=str(q.message.chat_id); favs=load_favorites()
     if cid not in favs: favs[cid]=[]
     if len(favs[cid])>=50:
-        await safe_answer(q,"❌ Max 50 favorites",show_alert=True); return
+        await safe_answer(q,tx(lang,"fav_max"),show_alert=True); return
     entry={"date":apod_data.get("date",date.today().isoformat()),"title":apod_data.get("title","APOD"),"url":apod_data.get("url",""),"hdurl":apod_data.get("hdurl","")}
     if not any(f["date"]==entry["date"] for f in favs[cid]):
         favs[cid].insert(0,entry); save_favorites(favs)
@@ -3564,21 +4088,21 @@ async def favorites_view_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     cid=str(q.message.chat_id); favs=load_favorites(); my_favs=favs.get(cid,[])
     if not my_favs:
-        await safe_edit(q,"⭐ *Favorites*\n\nNo saved photos yet.\nTap ⭐ on any APOD to save it!",
+        await safe_edit(q,f"{tx(lang,'fav_title')}\n\n{tx(lang,'fav_empty')}",
             reply_markup=back_kb(lang,ctx=ctx)); return
-    lines=["⭐ *Your Favorites*\n"]
+    lines=[tx(lang,"fav_your")+"\n"]
     for i,f in enumerate(my_favs[:15]):
         link=f"[{f['title'][:35]}]({f.get('hdurl') or f.get('url','')})"
         lines.append(f"{i+1}. {link} _{f['date']}_")
-    lines.append(f"\n_Total: {len(my_favs)} photos_")
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🗑 Clear all",callback_data="favorites_clear"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
-    await safe_edit(q,"\n".join(lines)[:4096],reply_markup=kb,disable_web_page_preview=True)
+    lines.append("\n"+tx(lang,"fav_total",n=len(my_favs)))
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"fav_clear"),callback_data="favorites_clear"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
+    await safe_edit(q,"\n".join(lines)[:4096],reply_markup=kb)
 
 async def favorites_clear_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     cid=str(q.message.chat_id); favs=load_favorites()
     favs[cid]=[]; save_favorites(favs)
-    await safe_edit(q,"🗑 Favorites cleared.",reply_markup=back_kb(lang,ctx=ctx))
+    await safe_edit(q,tx(lang,"fav_cleared"),reply_markup=back_kb(lang,ctx=ctx))
 # ── End: FAVORITES HANDLERS ───────────────────────────────────────────────────
 
 
@@ -3589,11 +4113,11 @@ async def smart_alerts_menu_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     cid=str(q.message.chat_id); alerts=load_smart_alerts(); my=alerts.get(cid,{})
     kp_t=my.get("kp_threshold",7); ld_t=my.get("asteroid_ld",2); eq_t=my.get("earthquake_min",6)
-    text=(f"🔔 *Smart Alerts Settings*\n\n"
-          f"⚡ Kp alert when ≥ *{kp_t}* (aurora visible)\n"
-          f"☄️ Asteroid alert when < *{ld_t}* LD\n"
-          f"🌍 Earthquake alert when M ≥ *{eq_t}*\n\n"
-          f"_Tap to change a threshold:_")
+    text=(f"{tx(lang,'smart_title')}\n\n"
+          f"{tx(lang,'smart_kp_desc',v=kp_t)}\n"
+          f"{tx(lang,'smart_ast_desc',v=ld_t)}\n"
+          f"{tx(lang,'smart_eq_desc',v=eq_t)}\n\n"
+          f"{tx(lang,'smart_tap')}")
     kb=InlineKeyboardMarkup([
         [InlineKeyboardButton(f"⚡ Kp ≥ {kp_t} (change)",callback_data="smart_set_kp")],
         [InlineKeyboardButton(f"☄️ Asteroid < {ld_t} LD (change)",callback_data="smart_set_ld")],
@@ -3606,7 +4130,7 @@ async def smart_set_kp_start(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     ctx.user_data["smart_lang"]=lang
     await del_msg(q)
-    await ctx.bot.send_message(q.message.chat_id,"⚡ Send Kp threshold (1–9, e.g. *5* for moderate aurora):",parse_mode="Markdown")
+    await ctx.bot.send_message(q.message.chat_id,tx(lang,"smart_kp_ask"),parse_mode="Markdown")
     return SMART_KP
 
 async def smart_kp_received(update, ctx):
@@ -3615,19 +4139,19 @@ async def smart_kp_received(update, ctx):
         val=int(update.message.text.strip())
         if not 1<=val<=9: raise ValueError
     except:
-        await update.message.reply_text("❌ Enter 1–9"); return SMART_KP
+        await update.message.reply_text(tx(lang,"smart_kp_err")); return SMART_KP
     cid=str(update.effective_chat.id); alerts=load_smart_alerts()
     if cid not in alerts: alerts[cid]={}
     alerts[cid]["kp_threshold"]=val; save_smart_alerts(alerts)
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔔 Back to alerts",callback_data="smart_alerts_menu")]])
-    await update.message.reply_text(f"✅ Kp alert set to ≥ *{val}*",parse_mode="Markdown",reply_markup=kb)
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"smart_back"),callback_data="smart_alerts_menu")]])
+    await update.message.reply_text(tx(lang,"smart_kp_set",v=val),parse_mode="Markdown",reply_markup=kb)
     return ConversationHandler.END
 
 async def smart_set_ld_start(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     ctx.user_data["smart_lang"]=lang
     await del_msg(q)
-    await ctx.bot.send_message(q.message.chat_id,"☄️ Send asteroid LD threshold (1–10, e.g. *2* = within 2 lunar distances):",parse_mode="Markdown")
+    await ctx.bot.send_message(q.message.chat_id,tx(lang,"smart_ld_ask"),parse_mode="Markdown")
     return SMART_LD
 
 async def smart_ld_received(update, ctx):
@@ -3636,19 +4160,19 @@ async def smart_ld_received(update, ctx):
         val=float(update.message.text.strip().replace(",","."))
         if not 0.5<=val<=20: raise ValueError
     except:
-        await update.message.reply_text("❌ Enter 0.5–20"); return SMART_LD
+        await update.message.reply_text(tx(lang,"smart_ld_err")); return SMART_LD
     cid=str(update.effective_chat.id); alerts=load_smart_alerts()
     if cid not in alerts: alerts[cid]={}
     alerts[cid]["asteroid_ld"]=val; save_smart_alerts(alerts)
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔔 Back to alerts",callback_data="smart_alerts_menu")]])
-    await update.message.reply_text(f"✅ Asteroid alert set to < *{val} LD*",parse_mode="Markdown",reply_markup=kb)
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"smart_back"),callback_data="smart_alerts_menu")]])
+    await update.message.reply_text(tx(lang,"smart_ld_set",v=val),parse_mode="Markdown",reply_markup=kb)
     return ConversationHandler.END
 
 async def smart_set_eq_start(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     ctx.user_data["smart_lang"]=lang
     await del_msg(q)
-    await ctx.bot.send_message(q.message.chat_id,"🌍 Send earthquake M threshold (4–9, e.g. *6*):",parse_mode="Markdown")
+    await ctx.bot.send_message(q.message.chat_id,tx(lang,"smart_eq_ask"),parse_mode="Markdown")
     return SMART_KP  # reuse same state
 
 async def smart_eq_received(update, ctx):
@@ -3656,16 +4180,17 @@ async def smart_eq_received(update, ctx):
     try:
         val=float(update.message.text.strip()); assert 4<=val<=9
     except:
-        await update.message.reply_text("❌ Enter 4–9"); return SMART_KP
+        await update.message.reply_text(tx(lang,"smart_eq_err")); return SMART_KP
     cid=str(update.effective_chat.id); alerts=load_smart_alerts()
     if cid not in alerts: alerts[cid]={}
     alerts[cid]["earthquake_min"]=val; save_smart_alerts(alerts)
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔔 Back",callback_data="smart_alerts_menu")]])
-    await update.message.reply_text(f"✅ Earthquake alert set to M ≥ *{val}*",parse_mode="Markdown",reply_markup=kb)
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"smart_back"),callback_data="smart_alerts_menu")]])
+    await update.message.reply_text(tx(lang,"smart_eq_set",v=val),parse_mode="Markdown",reply_markup=kb)
     return ConversationHandler.END
 
 async def smart_cancel(update, ctx):
-    await update.message.reply_text("Cancelled."); return ConversationHandler.END
+    lang=ctx.user_data.get("smart_lang","en")
+    await update.message.reply_text(tx(lang,"cancelled")); return ConversationHandler.END
 
 async def job_smart_alerts_check(context):
     """Hourly: check live Kp + asteroids against user thresholds."""
@@ -3713,15 +4238,15 @@ async def my_stats_h(update, ctx):
     cid=str(q.message.chat_id); stats=load_stats(); s=stats.get(cid,{})
     ach=load_achievements(); earned=len(ach.get(cid,{}).get("earned",[]))
     favs=load_favorites(); fav_count=len(favs.get(cid,[]))
-    text=(f"📊 *My Space Stats*\n\n"
-          f"📸 APOD viewed: *{s.get('apod',0)}*\n"
-          f"🧠 Quizzes taken: *{s.get('quiz',0)}*\n"
-          f"🏆 Perfect quizzes: *{s.get('quiz_perfect',0)}*\n"
-          f"🎯 Challenges done: *{s.get('challenge',0)}*\n"
-          f"⭐ Favorites saved: *{fav_count}*\n"
-          f"🏅 Achievements: *{earned}/{len(ACHIEVEMENTS_DEF)}*\n"
-          f"🔥 Current streak: *{s.get('streak',0)} days*\n"
-          f"📅 Active since: *{min(s.get('days',[date.today().isoformat()]))[:10]}*")
+    text=(f"{tx(lang,'stats_title')}\n\n"
+          f"{tx(lang,'stats_apod')} *{s.get('apod',0)}*\n"
+          f"{tx(lang,'stats_quiz')} *{s.get('quiz',0)}*\n"
+          f"{tx(lang,'stats_perfect')} *{s.get('quiz_perfect',0)}*\n"
+          f"{tx(lang,'stats_challenge')} *{s.get('challenge',0)}*\n"
+          f"{tx(lang,'stats_favorites')} *{fav_count}*\n"
+          f"{tx(lang,'stats_achievements')} *{earned}/{len(ACHIEVEMENTS_DEF)}*\n"
+          f"{tx(lang,'stats_streak')} *{s.get('streak',0)} {tx(lang,'stats_streak_days')}*\n"
+          f"{tx(lang,'stats_since')} *{min(s.get('days',[date.today().isoformat()]))[:10]}*")
     await safe_edit(q,text,reply_markup=back_kb(lang,"cat_interact",ctx))
 # ── End: MY STATS HANDLER ─────────────────────────────────────────────────────
 
@@ -3747,7 +4272,7 @@ async def iss_schedule_start(update, ctx):
     await del_msg(q)
     cities=", ".join(k.title() for k in list(CITY_COORDS.keys())[:8])+"..."
     await ctx.bot.send_message(q.message.chat_id,
-        f"🌠 *ISS Visibility Schedule*\n\nEnter your city name:\n_Examples: {cities}_",
+        f"{tx(lang,'iss_sched_title')}\n\n{tx(lang,'iss_sched_enter')}\n{tx(lang,'iss_sched_examples',cities=cities)}",
         parse_mode="Markdown")
     return ISS_CITY
 
@@ -3771,7 +4296,7 @@ async def iss_city_received(update, ctx):
                 match=(city_name,lat,lon)
         except: pass
     if not match:
-        await update.message.reply_text("❌ City not found. Try: Moscow, London, Tokyo, Tel Aviv, Dubai...")
+        await update.message.reply_text(tx(lang,"iss_sched_not_found"))
         return ISS_CITY
     city_name,lat,lon=match
     # Get ISS passes from Open Notify
@@ -3789,24 +4314,25 @@ async def iss_city_received(update, ctx):
         # Fallback: calculate from current position
         try:
             pos=get_iss_position()
-            text=(f"🌠 *ISS over {city_name}*\n\n"
-                  f"⚠️ Pass prediction API unavailable.\n\n"
-                  f"📍 ISS current position:\n"
+            text=(f"{tx(lang,'iss_sched_over',city=city_name)}\n\n"
+                  f"{tx(lang,'iss_sched_api_na')}\n\n"
+                  f"{tx(lang,'iss_sched_position')}\n"
                   f"   Lat: {pos['lat']:+.2f}°  |  Lon: {pos['lon']:+.2f}°\n"
-                  f"   Altitude: ~408 km\n\n"
-                  f"🔄 ISS completes one orbit every ~92 min.\n"
-                  f"For precise times: [Heavens Above](https://www.heavens-above.com/PassSummary.aspx?lat={lat}&lng={lon})")
-        except: text=f"🌠 *ISS visibility for {city_name}*\n\nUse [Heavens Above](https://heavens-above.com) for precise passes."
+                  f"   {tx(lang,'iss_sched_alt')}\n\n"
+                  f"{tx(lang,'iss_sched_orbit')}\n"
+                  f"[Heavens Above](https://www.heavens-above.com/PassSummary.aspx?lat={lat}&lng={lon})")
+        except: text=f"{tx(lang,'iss_sched_over',city=city_name)}\n\n[Heavens Above](https://heavens-above.com)"
     else:
-        text=(f"🌠 *ISS over {city_name}*\n📍 {lat:+.2f}°, {lon:+.2f}°\n\n"
-              f"⬆️ *Upcoming passes:*\n\n"+"\n".join(passes)+
-              f"\n\n_Times are local UTC. ISS moves at 28,000 km/h._")
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+        text=(f"{tx(lang,'iss_sched_over',city=city_name)}\n📍 {lat:+.2f}°, {lon:+.2f}°\n\n"
+              f"{tx(lang,'iss_sched_passes')}\n\n"+"\n".join(passes)+
+              f"\n\n{tx(lang,'iss_sched_times')}")
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
     await update.message.reply_text(text[:4096],parse_mode="Markdown",reply_markup=kb,disable_web_page_preview=True)
     return ConversationHandler.END
 
 async def iss_city_cancel(update, ctx):
-    await update.message.reply_text("Cancelled."); return ConversationHandler.END
+    lang=ctx.user_data.get("iss_sched_lang","en")
+    await update.message.reply_text(tx(lang,"cancelled")); return ConversationHandler.END
 # ── End: ISS VISIBILITY ───────────────────────────────────────────────────────
 
 
@@ -3818,7 +4344,7 @@ async def meteorite_map_h(update, ctx):
     try:
         r=requests.get("https://data.nasa.gov/resource/gh4g-9sfh.json?$limit=2000&$order=mass+DESC",timeout=15)
         r.raise_for_status(); data=r.json()[:10]
-        lines=["🗺 *Top 10 Meteorites (NASA Database)*\n"]
+        lines=[tx(lang,"meteor_map_title")+"\n"]
         for m in data:
             name=m.get("name","?"); mass=m.get("mass","?")
             year=str(m.get("year","?"))[:4]
@@ -3832,14 +4358,14 @@ async def meteorite_map_h(update, ctx):
             lines.append(f"☄️ *{name}* ({year}) — {mass_t} — {rec} {map_link}")
         text="\n".join(lines)+"\n\n[🔗 Full NASA Database](https://data.nasa.gov/resource/gh4g-9sfh.json)"
     except Exception as e:
-        text=("🗺 *Famous Meteorites*\n\n"
+        text=(tx(lang,"meteor_map_famous")+"\n\n"
               "☄️ *Hoba* (Namibia, 1920) — 60 tons — largest ever found\n"
               "☄️ *Chelyabinsk* (Russia, 2013) — 13,000 tons — injured 1,600 people\n"
               "☄️ *Allende* (Mexico, 1969) — 2 tons — oldest material in solar system\n"
               "☄️ *ALH84001* (Antarctica) — Martian meteorite with possible microfossils\n"
               "☄️ *Willamette* (USA) — 15.5 tons — largest in North America\n\n"
               "[🔗 NASA Meteorite Database](https://data.nasa.gov/resource/gh4g-9sfh.json)")
-    await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"meteorite_map",ctx),disable_web_page_preview=True)
+    await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"meteorite_map",ctx))
 # ── End: METEORITE MAP ────────────────────────────────────────────────────────
 
 
@@ -3848,7 +4374,7 @@ async def meteorite_map_h(update, ctx):
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def flight_calculator_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
-    await safe_edit(q,"🧮 *Flight Calculator*\n\nChoose your destination:",reply_markup=flight_target_kb(lang))
+    await safe_edit(q,f"{tx(lang,'flight_title')}\n\n{tx(lang,'flight_choose')}",reply_markup=flight_target_kb(lang))
 
 async def flight_target_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -3856,7 +4382,7 @@ async def flight_target_h(update, ctx):
     target=FLIGHT_TARGETS.get(target_key)
     if not target: return
     ctx.user_data["flight_target"]=target_key
-    await safe_edit(q,f"🚀 To *{target['name']}* ({target['desc']})\n\nChoose your spacecraft speed:",
+    await safe_edit(q,tx(lang,"flight_to",name=target['name'],desc=target['desc']),
         reply_markup=flight_speed_kb(lang,target_key))
 
 async def flight_calc_h(update, ctx):
@@ -3874,16 +4400,16 @@ async def flight_calc_h(update, ctx):
     else:              time_str=f"{hours:.1f} hours"
     # Fun context
     context_lines=[]
-    if years>4 and speed_key!="light": context_lines.append("_Your great-great-grandchildren would arrive._")
-    if speed_key=="light" and target_key=="andromeda": context_lines.append("_At lightspeed — still 2.5 million years!_")
-    if speed_key=="car" and target_key!="moon": context_lines.append("_You'd need fuel worth more than the GDP of Earth._")
-    text=(f"🧮 *Flight Calculator Result*\n\n"
-          f"📍 From: Earth  →  {target['name']}\n"
-          f"📏 Distance: {dist_km:,.0f} km\n"
-          f"⚡ Speed: {speed['name']} ({kmh:,.0f} km/h)\n\n"
-          f"🕐 Travel time: *{time_str}*\n\n"
+    if years>4 and speed_key!="light": context_lines.append(tx(lang,"flight_grandchildren"))
+    if speed_key=="light" and target_key=="andromeda": context_lines.append(tx(lang,"flight_lightspeed"))
+    if speed_key=="car" and target_key!="moon": context_lines.append(tx(lang,"flight_fuel"))
+    text=(f"{tx(lang,'flight_result_title')}\n\n"
+          f"{tx(lang,'flight_from',name=target['name'])}\n"
+          f"{tx(lang,'flight_distance',km=f'{dist_km:,.0f}')}\n"
+          f"{tx(lang,'flight_speed_label',name=speed['name'],kmh=f'{kmh:,.0f}')}\n\n"
+          f"{tx(lang,'flight_time',t=time_str)}\n\n"
           f"{chr(10).join(context_lines)}")
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("🔄 Calculate another",callback_data="flight_calculator"),InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"flight_another"),callback_data="flight_calculator"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
     await safe_edit(q,text.strip(),reply_markup=kb)
 # ── End: FLIGHT CALCULATOR ────────────────────────────────────────────────────
 
@@ -3893,7 +4419,7 @@ async def flight_calc_h(update, ctx):
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def mission_status_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
-    await safe_edit(q,"📡 *Active Space Missions*\nSelect to learn more:",reply_markup=missions_kb(lang))
+    await safe_edit(q,f"{tx(lang,'missions_title')}\n{tx(lang,'missions_select')}",reply_markup=missions_kb(lang))
 
 async def mission_detail_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -3909,8 +4435,8 @@ async def mission_detail_h(update, ctx):
           f"[{bar}] {m['progress']}%\n\n"
           f"_{m['desc']}_\n\n"
           f"[🔗 Learn more]({m['url']})")
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("◀️ All missions",callback_data="mission_status"),InlineKeyboardButton("◀️ Menu",callback_data="back")]])
-    await safe_edit(q,text[:4096],reply_markup=kb,disable_web_page_preview=True)
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"missions_all"),callback_data="mission_status"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
+    await safe_edit(q,text[:4096],reply_markup=kb)
 # ── End: MISSION STATUS HANDLER ───────────────────────────────────────────────
 
 
@@ -3919,7 +4445,7 @@ async def mission_detail_h(update, ctx):
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def space_dictionary_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
-    await safe_edit(q,"📚 *Space Dictionary*\n\nChoose a term:",reply_markup=dict_kb(lang))
+    await safe_edit(q,f"{tx(lang,'dict_title')}\n\n{tx(lang,'dict_choose')}",reply_markup=dict_kb(lang))
 
 async def dict_term_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -3928,7 +4454,7 @@ async def dict_term_h(update, ctx):
     if not entry: return
     data=entry.get(lang, entry.get("en"))
     title,text,fact=data
-    full_text=(f"{entry['emoji']} *{title}*\n\n{text}\n\n💡 *Fun fact:* _{fact}_")
+    full_text=(f"{entry['emoji']} *{title}*\n\n{text}\n\n{tx(lang,'dict_funfact')} _{fact}_")
     await safe_edit(q,full_text,reply_markup=back_kb(lang,"space_dictionary",ctx))
 # ── End: SPACE DICTIONARY ─────────────────────────────────────────────────────
 
@@ -3938,25 +4464,25 @@ async def dict_term_h(update, ctx):
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def course_menu_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
-    await safe_edit(q,"🎓 *Astronomy in 30 Days*\n\nA daily lesson delivered to your inbox — from the Solar System to the cosmic web.",reply_markup=course_kb(lang))
+    await safe_edit(q,f"{tx(lang,'course_title')}\n\n{tx(lang,'course_desc')}",reply_markup=course_kb(lang))
 
 async def course_subscribe_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     cid=str(q.message.chat_id); cp=load_course()
     if cid in cp:
         day=cp[cid].get("day",1)
-        await safe_edit(q,f"🎓 Already subscribed! You're on Day *{day}/30*.\nNext lesson comes daily at 10:00.",
+        await safe_edit(q,tx(lang,"course_already",day=day),
             reply_markup=back_kb(lang,"course_menu",ctx)); return
     cp[cid]={"day":1,"subscribed":date.today().isoformat(),"lang":lang}
     save_course(cp)
     # Send first lesson immediately
     lesson=COURSE_LESSONS[0]
-    await safe_edit(q,f"✅ *Subscribed to 30-Day Astronomy Course!*\n\nHere's your first lesson:\n\n{lesson['title']}\n\n{lesson['text']}",
+    await safe_edit(q,f"{tx(lang,'course_subscribed')}\n\n{lesson['title']}\n\n{lesson['text']}",
         reply_markup=back_kb(lang,"course_menu",ctx))
 
 async def course_browse_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
-    lines=["📚 *All 30 Lessons*\n"]
+    lines=[tx(lang,"course_all")+"\n"]
     for l in COURSE_LESSONS: lines.append(f"Day {l['day']:02d}. {l['title']}")
     await safe_edit(q,"\n".join(lines)[:4096],reply_markup=back_kb(lang,"course_menu",ctx))
 
@@ -3969,7 +4495,7 @@ async def job_course_lesson(context):
         if day>30: continue
         lesson=COURSE_LESSONS[day-1]
         lang=data.get("lang","en")
-        text=f"🎓 *Day {day}/30 — Astronomy Course*\n\n{lesson['title']}\n\n{lesson['text']}"
+        text=f"{tx(lang,'course_day',day=day)}\n\n{lesson['title']}\n\n{lesson['text']}"
         try:
             await context.bot.send_message(int(cid),text[:4096],parse_mode="Markdown")
             cp[cid]["day"]=day+1; updated=True
@@ -4044,18 +4570,18 @@ CAT_MAP.update(NEW_CAT_MAP)
 # BLOCK: CALLBACK ROUTER ADDITIONS                                               ║
 # These are extra patterns — add handling to callback_router() in part2:        ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
-async def route_new_callbacks(q, cb, ctx, lang):
+async def route_new_callbacks(update, q, cb, ctx, lang):
     """Returns True if this function handled the callback, False otherwise."""
-    if cb.startswith("sat_"):           await sat_detail_h(q._update_ref,ctx); return True
-    if cb.startswith("mission_"):       await mission_detail_h(q._update_ref,ctx); return True
-    if cb.startswith("flight_target_"): await flight_target_h(q._update_ref,ctx); return True
-    if cb.startswith("flight_calc_"):   await flight_calc_h(q._update_ref,ctx); return True
-    if cb.startswith("dict_"):          await dict_term_h(q._update_ref,ctx); return True
-    if cb.startswith("challenge_ans_"): await challenge_answer_h(q._update_ref,ctx); return True
-    if cb=="favorites_save":            await favorites_save_h(q._update_ref,ctx); return True
-    if cb=="smart_set_kp":              await smart_set_kp_start(q._update_ref,ctx); return True
-    if cb=="smart_set_ld":              await smart_set_ld_start(q._update_ref,ctx); return True
-    if cb=="smart_set_eq":              await smart_set_eq_start(q._update_ref,ctx); return True
+    if cb.startswith("sat_"):           await sat_detail_h(update,ctx); return True
+    if cb.startswith("mission_"):       await mission_detail_h(update,ctx); return True
+    if cb.startswith("flight_target_"): await flight_target_h(update,ctx); return True
+    if cb.startswith("flight_calc_"):   await flight_calc_h(update,ctx); return True
+    if cb.startswith("dict_"):          await dict_term_h(update,ctx); return True
+    if cb.startswith("challenge_ans_"): await challenge_answer_h(update,ctx); return True
+    if cb=="favorites_save":            await favorites_save_h(update,ctx); return True
+    if cb=="smart_set_kp":              await smart_set_kp_start(update,ctx); return True
+    if cb=="smart_set_ld":              await smart_set_ld_start(update,ctx); return True
+    if cb=="smart_set_eq":              await smart_set_eq_start(update,ctx); return True
     if cb=="cat_profile":
         await safe_answer(q); ctx.user_data["last_cat"]="cat_profile"
         await safe_edit(q,tx(lang,"title_profile")+"\n\n"+tx(lang,"choose_sec"),reply_markup=profile_kb(lang)); return True
@@ -4131,7 +4657,7 @@ async def callback_router(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await notif_toggle_h(update,ctx); return
     if cb.startswith("quiz_ans_"):
         await quiz_answer_h(update,ctx); return
-    if await route_new_callbacks(q, cb, ctx, lang):
+    if await route_new_callbacks(update, q, cb, ctx, lang):
         return
     if cb in STATIC_TEXTS:
         await safe_answer(q)
