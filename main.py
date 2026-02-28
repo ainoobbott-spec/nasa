@@ -1444,8 +1444,8 @@ def cache_set(key: str, data):
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # BLOCK: TELEGRAM MESSAGE HELPERS (safe_answer, safe_edit, del_msg)             ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
-async def safe_answer(q):
-    try: await q.answer()
+async def safe_answer(q, text=None, show_alert=False):
+    try: await q.answer(text=text, show_alert=show_alert)
     except: pass
 
 async def safe_edit(q, text, reply_markup=None):
@@ -1628,16 +1628,16 @@ def cat_science_kb(lang):
 def cat_live_kb(lang):
     L = lambda k: tx(lang, k)
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(L("btn_solar_wind"),  callback_data="live_solar_wind")],
-        [InlineKeyboardButton(L("btn_kp"),          callback_data="live_kp"),
-         InlineKeyboardButton(L("btn_flares"),      callback_data="live_flares")],
-        [InlineKeyboardButton(L("btn_live_iss"),    callback_data="live_iss"),
-         InlineKeyboardButton(L("btn_radiation"),   callback_data="live_radiation")],
-        [InlineKeyboardButton(L("btn_aurora_f"),    callback_data="live_aurora_forecast"),
-         InlineKeyboardButton(L("btn_geomag"),      callback_data="live_geomagnetic_alert")],
-        [InlineKeyboardButton(L("btn_sunspot"),     callback_data="live_sunspot"),
-         InlineKeyboardButton(L("btn_live_epic"),   callback_data="live_epic_latest")],
-        [InlineKeyboardButton(L("btn_sat_count"),   callback_data="live_satellite_count")],
+        [InlineKeyboardButton(L("btn_solar_wind"),  callback_data="live_solar_wind"),
+         InlineKeyboardButton(L("btn_kp"),          callback_data="live_kp")],
+        [InlineKeyboardButton(L("btn_flares"),      callback_data="live_flares"),
+         InlineKeyboardButton(L("btn_live_iss"),    callback_data="live_iss")],
+        [InlineKeyboardButton(L("btn_radiation"),   callback_data="live_radiation"),
+         InlineKeyboardButton(L("btn_aurora_f"),    callback_data="live_aurora_forecast")],
+        [InlineKeyboardButton(L("btn_geomag"),      callback_data="live_geomagnetic_alert"),
+         InlineKeyboardButton(L("btn_sunspot"),     callback_data="live_sunspot")],
+        [InlineKeyboardButton(L("btn_live_epic"),   callback_data="live_epic_latest"),
+         InlineKeyboardButton(L("btn_sat_count"),   callback_data="live_satellite_count")],
         [InlineKeyboardButton(L("btn_sat_tracker"),  callback_data="satellite_tracker"),
          InlineKeyboardButton(L("btn_earthquakes"),  callback_data="earthquakes")],
         [InlineKeyboardButton(L("btn_sw_digest"),    callback_data="spaceweather_digest"),
@@ -1648,16 +1648,16 @@ def cat_live_kb(lang):
 def cat_interact_kb(lang):
     L = lambda k: tx(lang, k)
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(L("btn_planet_calc"),   callback_data="planet_calc")],
-        [InlineKeyboardButton(L("btn_horoscope"),     callback_data="horoscope_menu")],
-        [InlineKeyboardButton(L("btn_space_name"),    callback_data="space_name")],
-        [InlineKeyboardButton(L("btn_quiz"),          callback_data="quiz_start_menu")],
-        [InlineKeyboardButton(L("btn_poll"),          callback_data="daily_poll")],
-        [InlineKeyboardButton(L("btn_capsule"),       callback_data="capsule_menu")],
-        [InlineKeyboardButton(L("btn_lunar_cal"),     callback_data="lunar_calendar")],
-        [InlineKeyboardButton(L("btn_mars_live"),     callback_data="mars_rover_live")],
-        [InlineKeyboardButton(L("btn_notifications"), callback_data="notifications_menu")],
-        [InlineKeyboardButton(L("btn_nasa_tv"),       callback_data="nasa_tv")],
+        [InlineKeyboardButton(L("btn_planet_calc"),    callback_data="planet_calc"),
+         InlineKeyboardButton(L("btn_horoscope"),      callback_data="horoscope_menu")],
+        [InlineKeyboardButton(L("btn_space_name"),     callback_data="space_name"),
+         InlineKeyboardButton(L("btn_quiz"),           callback_data="quiz_start_menu")],
+        [InlineKeyboardButton(L("btn_poll"),           callback_data="daily_poll"),
+         InlineKeyboardButton(L("btn_capsule"),        callback_data="capsule_menu")],
+        [InlineKeyboardButton(L("btn_lunar_cal"),      callback_data="lunar_calendar"),
+         InlineKeyboardButton(L("btn_mars_live"),      callback_data="mars_rover_live")],
+        [InlineKeyboardButton(L("btn_notifications"),  callback_data="notifications_menu"),
+         InlineKeyboardButton(L("btn_nasa_tv"),        callback_data="nasa_tv")],
         [InlineKeyboardButton(L("btn_challenge"),      callback_data="daily_challenge_start"),
          InlineKeyboardButton(L("btn_rocket_game"),    callback_data="rocket_game")],
         [InlineKeyboardButton(L("btn_daily_horoscope"),callback_data="daily_horoscope"),
@@ -1668,18 +1668,16 @@ def cat_interact_kb(lang):
          InlineKeyboardButton(L("btn_mission_status"), callback_data="mission_status")],
         [InlineKeyboardButton(L("btn_dictionary"),     callback_data="space_dictionary"),
          InlineKeyboardButton(L("btn_course"),         callback_data="course_menu")],
-        [InlineKeyboardButton(L("back_menu"),         callback_data="back")],
+        [InlineKeyboardButton(L("back_menu"),          callback_data="back")],
     ])
 
 def cat_news_kb(lang):
     L = lambda k: tx(lang, k)
     return InlineKeyboardMarkup([
-        # 4 most reliable sources shown in menu
-        [InlineKeyboardButton(L("btn_news_sfn"),         callback_data="news_sfn")],
-        [InlineKeyboardButton(L("btn_news_spacenews"),   callback_data="news_spacenews")],
-        [InlineKeyboardButton(L("btn_news_esa"),         callback_data="news_esa")],
-        [InlineKeyboardButton(L("btn_news_universetoday"), callback_data="news_universetoday")],
-        # Extra sources in second row
+        [InlineKeyboardButton(L("btn_news_sfn"),         callback_data="news_sfn"),
+         InlineKeyboardButton(L("btn_news_spacenews"),   callback_data="news_spacenews")],
+        [InlineKeyboardButton(L("btn_news_esa"),         callback_data="news_esa"),
+         InlineKeyboardButton(L("btn_news_universetoday"), callback_data="news_universetoday")],
         [InlineKeyboardButton(L("btn_news_nasa"),        callback_data="news_nasa"),
          InlineKeyboardButton(L("btn_news_skytel"),      callback_data="news_skytel")],
         [InlineKeyboardButton(L("btn_news_planetary"),   callback_data="news_planetary"),
@@ -1698,6 +1696,7 @@ def news_article_kb(lang, source_key, idx, total, article_link):
     src_row = []
     if article_link:
         src_row.append(InlineKeyboardButton(tx(lang, "btn_news_source"), url=article_link))
+    src_row.append(InlineKeyboardButton(tx(lang, "back_cat"), callback_data="cat_news"))
     src_row.append(InlineKeyboardButton(tx(lang, "back_menu"), callback_data="back"))
     rows.append(src_row)
     return InlineKeyboardMarkup(rows)
@@ -2041,7 +2040,7 @@ async def _send_apod(q, ctx, params=None):
         copy_   = data.get("copyright", "NASA").strip().replace("\n", " ")
         caption = f"🌌 *{title}*\n📅 {d}  |  © {copy_}\n\n{expl}…\n\n[🔗 HD]({hdurl})"
         # Build keyboard with ⭐ Save to favorites button
-        save_btn = InlineKeyboardButton("⭐ Сохранить / Save", callback_data="favorites_save")
+        save_btn = InlineKeyboardButton(tx(lang, "fav_saved").replace("!",""), callback_data="favorites_save")
         if not params:
             kb = InlineKeyboardMarkup([
                 [InlineKeyboardButton(tx(lang, "btn_more_rnd"), callback_data="apod_random"), save_btn],
@@ -2881,7 +2880,7 @@ async def capsule_msg_received(update, ctx):
     capsules=load_capsules()
     capsules.append({"chat_id":update.effective_chat.id,"message":user_msg,"deliver_on":deliver_on,"created_at":date.today().isoformat()})
     save_capsules(capsules)
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
     await update.message.reply_text(tx(lang,"capsule_saved",date=deliver_on),parse_mode="Markdown",reply_markup=kb)
     return ConversationHandler.END
 
@@ -3607,7 +3606,7 @@ def challenge_kb(lang, q_idx, answered=False):
     q=CHALLENGE_DATA[q_idx]
     if answered:
         return InlineKeyboardMarkup([[
-            InlineKeyboardButton("🎯 Next challenge",callback_data="daily_challenge_start"),
+            InlineKeyboardButton(tx(lang,"challenge_next"),callback_data="daily_challenge_start"),
             InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back"),
         ]])
     rows=[[InlineKeyboardButton(f"{chr(65+i)}. {opt[:30]}",callback_data=f"challenge_ans_{q_idx}_{i}")] for i,opt in enumerate(q["options"])]
@@ -3618,16 +3617,15 @@ def dict_kb(lang):
     rows=[]
     items=[(k,v) for k,v in SPACE_DICT.items()]
     for i in range(0,len(items),3):
-        row=[InlineKeyboardButton(v["emoji"]+" "+(v["ru"][0] if lang=="ru" else v["en"][0])[:14],callback_data=f"dict_{k}") for k,v in items[i:i+3]]
+        row=[InlineKeyboardButton(v["emoji"]+" "+v.get(lang,v["en"])[0][:14],callback_data=f"dict_{k}") for k,v in items[i:i+3]]
         rows.append(row)
     rows.append([InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")])
     return InlineKeyboardMarkup(rows)
 
 def course_kb(lang):
-    cp=load_course(); cid_str="self"
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎓 Подписаться на курс",callback_data="course_subscribe")],
-        [InlineKeyboardButton("📚 Просмотреть все уроки",callback_data="course_browse")],
+        [InlineKeyboardButton(tx(lang,"course_subscribe_btn"),callback_data="course_subscribe")],
+        [InlineKeyboardButton(tx(lang,"course_browse_btn"),callback_data="course_browse")],
         [InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")],
     ])
 # ── End: NEW KEYBOARDS ────────────────────────────────────────────────────────
@@ -3929,16 +3927,22 @@ async def daily_challenge_start(update, ctx):
     ctx.user_data["challenge_q"]=q_idx; ctx.user_data["challenge_answered"]=False
     chall=CHALLENGE_DATA[q_idx]
     await safe_edit(q,tx(lang,"challenge_loading"))
-    await del_msg(q)
+    caption=f"{tx(lang,'challenge_title')}\n\n{tx(lang,'challenge_question')}"
     try:
-        img=nasa_image_search(chall["img_q"],1)
-        caption=f"{tx(lang,'challenge_title')}\n\n{tx(lang,'challenge_question')}"
-        await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img,caption=caption,
-            parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
-    except:
-        await ctx.bot.send_message(chat_id=q.message.chat_id,
-            text=f"{tx(lang,'challenge_title')}\n\n{tx(lang,'challenge_question')}",
-            parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
+        r=requests.get("https://images-api.nasa.gov/search",
+            params={"q":chall["img_q"],"media_type":"image","page_size":10},timeout=12)
+        items=[it for it in r.json().get("collection",{}).get("items",[]) if it.get("links")]
+        if items:
+            img_url=(random.choice(items[:8]).get("links",[{}])[0]).get("href","")
+            if img_url:
+                await del_msg(q)
+                await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img_url,
+                    caption=caption,parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
+                return
+    except: pass
+    await del_msg(q)
+    await ctx.bot.send_message(chat_id=q.message.chat_id,
+        text=caption,parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
 
 async def challenge_answer_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -4092,7 +4096,7 @@ async def favorites_view_h(update, ctx):
         lines.append(f"{i+1}. {link} _{f['date']}_")
     lines.append("\n"+tx(lang,"fav_total",n=len(my_favs)))
     kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"fav_clear"),callback_data="favorites_clear"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
-    await safe_edit(q,"\n".join(lines)[:4096],reply_markup=kb,disable_web_page_preview=True)
+    await safe_edit(q,"\n".join(lines)[:4096],reply_markup=kb)
 
 async def favorites_clear_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -4322,7 +4326,7 @@ async def iss_city_received(update, ctx):
         text=(f"{tx(lang,'iss_sched_over',city=city_name)}\n📍 {lat:+.2f}°, {lon:+.2f}°\n\n"
               f"{tx(lang,'iss_sched_passes')}\n\n"+"\n".join(passes)+
               f"\n\n{tx(lang,'iss_sched_times')}")
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
     await update.message.reply_text(text[:4096],parse_mode="Markdown",reply_markup=kb,disable_web_page_preview=True)
     return ConversationHandler.END
 
@@ -4361,7 +4365,7 @@ async def meteorite_map_h(update, ctx):
               "☄️ *ALH84001* (Antarctica) — Martian meteorite with possible microfossils\n"
               "☄️ *Willamette* (USA) — 15.5 tons — largest in North America\n\n"
               "[🔗 NASA Meteorite Database](https://data.nasa.gov/resource/gh4g-9sfh.json)")
-    await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"meteorite_map",ctx),disable_web_page_preview=True)
+    await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"meteorite_map",ctx))
 # ── End: METEORITE MAP ────────────────────────────────────────────────────────
 
 
@@ -4432,7 +4436,7 @@ async def mission_detail_h(update, ctx):
           f"_{m['desc']}_\n\n"
           f"[🔗 Learn more]({m['url']})")
     kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"missions_all"),callback_data="mission_status"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
-    await safe_edit(q,text[:4096],reply_markup=kb,disable_web_page_preview=True)
+    await safe_edit(q,text[:4096],reply_markup=kb)
 # ── End: MISSION STATUS HANDLER ───────────────────────────────────────────────
 
 
@@ -4566,18 +4570,18 @@ CAT_MAP.update(NEW_CAT_MAP)
 # BLOCK: CALLBACK ROUTER ADDITIONS                                               ║
 # These are extra patterns — add handling to callback_router() in part2:        ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
-async def route_new_callbacks(q, cb, ctx, lang):
+async def route_new_callbacks(update, q, cb, ctx, lang):
     """Returns True if this function handled the callback, False otherwise."""
-    if cb.startswith("sat_"):           await sat_detail_h(q._update_ref,ctx); return True
-    if cb.startswith("mission_"):       await mission_detail_h(q._update_ref,ctx); return True
-    if cb.startswith("flight_target_"): await flight_target_h(q._update_ref,ctx); return True
-    if cb.startswith("flight_calc_"):   await flight_calc_h(q._update_ref,ctx); return True
-    if cb.startswith("dict_"):          await dict_term_h(q._update_ref,ctx); return True
-    if cb.startswith("challenge_ans_"): await challenge_answer_h(q._update_ref,ctx); return True
-    if cb=="favorites_save":            await favorites_save_h(q._update_ref,ctx); return True
-    if cb=="smart_set_kp":              await smart_set_kp_start(q._update_ref,ctx); return True
-    if cb=="smart_set_ld":              await smart_set_ld_start(q._update_ref,ctx); return True
-    if cb=="smart_set_eq":              await smart_set_eq_start(q._update_ref,ctx); return True
+    if cb.startswith("sat_"):           await sat_detail_h(update,ctx); return True
+    if cb.startswith("mission_"):       await mission_detail_h(update,ctx); return True
+    if cb.startswith("flight_target_"): await flight_target_h(update,ctx); return True
+    if cb.startswith("flight_calc_"):   await flight_calc_h(update,ctx); return True
+    if cb.startswith("dict_"):          await dict_term_h(update,ctx); return True
+    if cb.startswith("challenge_ans_"): await challenge_answer_h(update,ctx); return True
+    if cb=="favorites_save":            await favorites_save_h(update,ctx); return True
+    if cb=="smart_set_kp":              await smart_set_kp_start(update,ctx); return True
+    if cb=="smart_set_ld":              await smart_set_ld_start(update,ctx); return True
+    if cb=="smart_set_eq":              await smart_set_eq_start(update,ctx); return True
     if cb=="cat_profile":
         await safe_answer(q); ctx.user_data["last_cat"]="cat_profile"
         await safe_edit(q,tx(lang,"title_profile")+"\n\n"+tx(lang,"choose_sec"),reply_markup=profile_kb(lang)); return True
@@ -4653,7 +4657,7 @@ async def callback_router(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await notif_toggle_h(update,ctx); return
     if cb.startswith("quiz_ans_"):
         await quiz_answer_h(update,ctx); return
-    if await route_new_callbacks(q, cb, ctx, lang):
+    if await route_new_callbacks(update, q, cb, ctx, lang):
         return
     if cb in STATIC_TEXTS:
         await safe_answer(q)
