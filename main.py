@@ -539,7 +539,8 @@ T = {
     "spaceweather_text_title":"*Космическая погода — Live*",
     "sw_calm":"🟢 Спокойно","sw_moderate":"🟡 Умеренно","sw_strong":"🟠 Сильно","sw_storm":"🔴 ШТОРМ",
     "kp_quiet":"🟢 Спокойно","kp_minor":"🟡 Незначительная","kp_moderate":"🟠 Умеренная","kp_strong":"🔴 Сильная","kp_extreme":"🚨 Экстремальная",
-    "aurora_polar":"Только полярные области","aurora_scandinavia":"Скандинавия/Канада","aurora_mid":"Средние широты","aurora_equatorial":"Экватор",
+    "aurora_polar":"Только полярные области","aurora_near_polar":"Приполярные области","aurora_scandinavia":"Скандинавия/Канада","aurora_mid":"Средние широты","aurora_equatorial":"Экватор",
+    "geomag_events":"События:",
     "live_solar_wind_title":"🔴 *LIVE: Солнечный ветер*",
     "live_kp_title":"🔴 *LIVE: Kp-индекс*",
     "live_flares_title":"🔴 *LIVE: Солнечные вспышки*",
@@ -784,7 +785,8 @@ T = {
     "spaceweather_text_title":"*Space Weather — Live*",
     "sw_calm":"🟢 Calm","sw_moderate":"🟡 Moderate","sw_strong":"🟠 Strong","sw_storm":"🔴 STORM",
     "kp_quiet":"🟢 Quiet","kp_minor":"🟡 Minor","kp_moderate":"🟠 Moderate","kp_strong":"🔴 Strong","kp_extreme":"🚨 G5",
-    "aurora_polar":"Polar only","aurora_scandinavia":"Scandinavia/Canada","aurora_mid":"Mid-latitudes","aurora_equatorial":"Equatorial",
+    "aurora_polar":"Polar only","aurora_near_polar":"Near polar circle","aurora_scandinavia":"Scandinavia/Canada","aurora_mid":"Mid-latitudes","aurora_equatorial":"Equatorial",
+    "geomag_events":"Events:",
     "live_solar_wind_title":"🔴 *LIVE: Solar Wind*",
     "live_kp_title":"🔴 *LIVE: Kp-index*",
     "live_flares_title":"🔴 *LIVE: Solar Flares*",
@@ -1014,7 +1016,8 @@ T = {
     "spaceweather_text_title":"*מזג אוויר חלל — Live*",
     "sw_calm":"🟢 רגוע","sw_moderate":"🟡 בינוני","sw_strong":"🟠 חזק","sw_storm":"🔴 סערה",
     "kp_quiet":"🟢 רגוע","kp_minor":"🟡 קל","kp_moderate":"🟠 בינוני","kp_strong":"🔴 חזק","kp_extreme":"🚨 קיצוני",
-    "aurora_polar":"קוטבי בלבד","aurora_scandinavia":"סקנדינביה/קנדה","aurora_mid":"רוחב ביניים","aurora_equatorial":"קו המשווה",
+    "aurora_polar":"קוטבי בלבד","aurora_near_polar":"קרוב לקוטב","aurora_scandinavia":"סקנדינביה/קנדה","aurora_mid":"רוחב ביניים","aurora_equatorial":"קו המשווה",
+    "geomag_events":"אירועים:",
     "live_solar_wind_title":"🔴 *LIVE: רוח סולארית*",
     "live_kp_title":"🔴 *LIVE: מדד Kp*",
     "live_flares_title":"🔴 *LIVE: להבות סולאריות*",
@@ -1244,7 +1247,8 @@ T = {
     "spaceweather_text_title":"*طقس الفضاء — مباشر*",
     "sw_calm":"🟢 هادئ","sw_moderate":"🟡 معتدل","sw_strong":"🟠 قوي","sw_storm":"🔴 عاصفة",
     "kp_quiet":"🟢 هادئ","kp_minor":"🟡 طفيف","kp_moderate":"🟠 معتدل","kp_strong":"🔴 قوي","kp_extreme":"🚨 شديد",
-    "aurora_polar":"القطب فقط","aurora_scandinavia":"سكندنافيا/كندا","aurora_mid":"خطوط العرض الوسطى","aurora_equatorial":"خط الاستواء",
+    "aurora_polar":"القطب فقط","aurora_near_polar":"قرب القطب","aurora_scandinavia":"سكندنافيا/كندا","aurora_mid":"خطوط العرض الوسطى","aurora_equatorial":"خط الاستواء",
+    "geomag_events":"الأحداث:",
     "live_solar_wind_title":"🔴 *مباشر: الرياح الشمسية*",
     "live_kp_title":"🔴 *مباشر: مؤشر Kp*",
     "live_flares_title":"🔴 *مباشر: التوهجات الشمسية*",
@@ -2686,7 +2690,7 @@ async def live_aurora_h(update, ctx):
         kp=current.get("kp_index",current.get("Kp","?")); time_=current.get("time_tag","")[:16].replace("T"," ")
         try:
             kp_val=float(kp)
-            forecast=("🌈 "+tx(lang,"aurora_mid")) if kp_val>=7 else ("🌈 "+tx(lang,"aurora_scandinavia")) if kp_val>=5 else ("🌈 "+tx(lang,"aurora_polar")) if kp_val>=4 else ("🌈 "+tx(lang,"aurora_polar"))
+            forecast=("🌈 "+tx(lang,"aurora_mid")) if kp_val>=7 else ("🌈 "+tx(lang,"aurora_scandinavia")) if kp_val>=5 else ("🌈 "+tx(lang,"aurora_near_polar")) if kp_val>=4 else ("🌈 "+tx(lang,"aurora_polar"))
         except: forecast="?"
         await safe_edit(q,f"{tx(lang,'live_aurora_title')}\n⏱ {time_} UTC\n\nKp: *{kp}*\n{forecast}",
             reply_markup=back_kb(lang,"live_aurora_forecast",ctx))
@@ -2698,7 +2702,7 @@ async def live_geomag_h(update, ctx):
     try:
         end=date.today().isoformat(); start=(date.today()-timedelta(days=2)).isoformat()
         storms=nasa_req("/DONKI/GST",{"startDate":start,"endDate":end}) or []
-        text=f"{tx(lang,'live_geomag_title')}\n\nEvents: *{len(storms)}*\n\n"
+        text=f"{tx(lang,'live_geomag_title')}\n\n{tx(lang,'geomag_events')} *{len(storms)}*\n\n"
         for s in (storms[-5:] if storms else []):
             t=(s.get("startTime") or "?")[:16].replace("T"," ")
             kp_i=s.get("allKpIndex",[{}]); kp_v=kp_i[-1].get("kpIndex","?") if kp_i else "?"
@@ -2881,7 +2885,7 @@ async def capsule_msg_received(update, ctx):
     capsules=load_capsules()
     capsules.append({"chat_id":update.effective_chat.id,"message":user_msg,"deliver_on":deliver_on,"created_at":date.today().isoformat()})
     save_capsules(capsules)
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
     await update.message.reply_text(tx(lang,"capsule_saved",date=deliver_on),parse_mode="Markdown",reply_markup=kb)
     return ConversationHandler.END
 
@@ -4322,7 +4326,7 @@ async def iss_city_received(update, ctx):
         text=(f"{tx(lang,'iss_sched_over',city=city_name)}\n📍 {lat:+.2f}°, {lon:+.2f}°\n\n"
               f"{tx(lang,'iss_sched_passes')}\n\n"+"\n".join(passes)+
               f"\n\n{tx(lang,'iss_sched_times')}")
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton("◀️ Menu",callback_data="back")]])
+    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
     await update.message.reply_text(text[:4096],parse_mode="Markdown",reply_markup=kb,disable_web_page_preview=True)
     return ConversationHandler.END
 
