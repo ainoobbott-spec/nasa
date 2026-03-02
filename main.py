@@ -130,34 +130,36 @@ NEWS_SOURCES = {
     },
     "news_sfn": {
         "url": "https://spaceflightnow.com/feed/",
+        "url_fallback": "https://spaceflightnow.com/feed/rss/",
         "name": "SpaceflightNow",
         "emoji": "🛸",
         "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0193.jpg",
     },
     "news_spacenews": {
         "url": "https://spacenews.com/feed/",
+        "url_fallback": "https://spacenews.com/feed/rss2/",
         "name": "SpaceNews",
         "emoji": "📡",
         "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0171.jpg",
     },
     "news_spacedotcom": {
         "url": "https://www.space.com/feeds/all",
-        "url_fallback": "https://www.space.com/rss/",
+        "url_fallback": "https://www.space.com/rss/article.rss",
         "name": "Space.com",
         "emoji": "🌌",
         "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIB.jpg",
     },
     "news_planetary": {
-        # FIX: Planetary Society uses Atom format — handled by _parse_atom()
-        "url": "https://www.planetary.org/articles.rss",
-        "url_fallback": "https://www.planetary.org/feed",
+        # FIX: Planetary Society uses Atom/RSS - feed.xml is their canonical feed
+        "url": "https://www.planetary.org/feed.xml",
+        "url_fallback": "https://www.planetary.org/articles",
         "name": "Planetary Society",
         "emoji": "🪐",
         "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg",
     },
     "news_esa": {
         "url": "https://www.esa.int/rssfeed/Our_Activities/Space_News",
-        "url_fallback": "https://www.esa.int/rssfeed/Space_news",
+        "url_fallback": "https://www.esa.int/rssfeed/Enabling_Support/Space_news",
         "name": "ESA",
         "emoji": "🛰",
         "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0193.jpg",
@@ -171,7 +173,7 @@ NEWS_SOURCES = {
     },
     "news_skytel": {
         "url": "https://skyandtelescope.org/feed/",
-        "url_fallback": "https://www.skyandtelescope.com/feed/",
+        "url_fallback": "https://www.skyandtelescope.org/news/feed/",
         "name": "Sky & Telescope",
         "emoji": "🔭",
         "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg",
@@ -351,7 +353,13 @@ def fetch_rss(source_key: str, max_items: int = 30) -> list:
 
     for url in urls_to_try:
         try:
-            r = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
+            for _attempt in range(2):
+                try:
+                    r = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
+                    break
+                except requests.exceptions.Timeout:
+                    if _attempt == 0: continue
+                    raise
             r.raise_for_status()
 
             root = ET.fromstring(r.content)
@@ -1407,7 +1415,7 @@ def get_iss_position() -> dict:
         ("https://api.wheretheiss.at/v1/satellites/25544",
          lambda d: {"lat": float(d["latitude"]), "lon": float(d["longitude"]),
                     "ts": datetime.utcnow().strftime("%H:%M:%S UTC")}),
-        ("http://api.open-notify.org/iss-now.json",
+        ("https://api.open-notify.org/iss-now.json",
          lambda d: {"lat": float(d["iss_position"]["latitude"]),
                     "lon": float(d["iss_position"]["longitude"]),
                     "ts": datetime.utcfromtimestamp(d["timestamp"]).strftime("%H:%M:%S UTC")}),
@@ -1422,9 +1430,9 @@ def get_iss_position() -> dict:
 def get_iss_crew() -> list:
     """Fetch ISS crew list; returns [] on failure."""
     try:
-        r = requests.get("http://api.open-notify.org/astros.json", timeout=8)
+        r = requests.get("https://api.open-notify.org/astros.json", timeout=8)
         if r.ok:
-            return [p["name"] for p in r.json().get("people", []) if p.get("craft") == "ISS"]
+            return [p["name"] for p in r.json().get("people", []) if "ISS" in str(p.get("craft", "")) or "International" in str(p.get("craft", ""))]
     except Exception:
         pass
     return []
@@ -1995,7 +2003,7 @@ async def send_nasa_image(q, ctx, queries, cb=""):
         desc    = strip_html(data.get("description", ""))[:400]
         date_c  = (data.get("date_created") or "")[:10]
         center  = data.get("center", "NASA")
-        img_url = (item.get("links", [{}])[0]).get("href", "")
+        img_url = (item.get("links", [{}])[0]).get("href", "").replace("http://", "https://")
         caption = f"*{title}*\n📅 {date_c}  |  🏛 {center}\n\n{desc + '…' if desc else ''}"
         kb = action_kb(lang, cb, "btn_another", ctx) if cb else back_kb(lang, ctx=ctx)
         await del_msg(q)
@@ -2211,7 +2219,7 @@ async def asteroids_h(update, ctx):
                 params={"q": random.choice(ast_imgs), "media_type": "image", "page_size": 20}, timeout=10)
             items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
             if items:
-                img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
+                img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "").replace("http://", "https://")
                 if img_url:
                     await del_msg(q)
                     await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
@@ -2246,7 +2254,7 @@ async def iss_h(update, ctx):
                 timeout=12)
             items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
             if items:
-                img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
+                img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "").replace("http://", "https://")
                 if img_url:
                     await del_msg(q)
                     await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
@@ -2281,7 +2289,7 @@ async def exoplanets_h(update, ctx):
             params={"q": random.choice(exo_imgs), "media_type": "image", "page_size": 20}, timeout=12)
         items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "").replace("http://", "https://")
             if img_url:
                 await del_msg(q)
                 await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
@@ -2374,9 +2382,37 @@ async def launches_h(update, ctx):
     try:
         launches = cache_get("launches")
         if not launches:
-            data = get_json("https://ll.thespacedevs.com/2.2.0/launch/upcoming/?limit=7&ordering=net&mode=list", timeout=15)
-            launches = data.get("results", [])
-            if launches: cache_set("launches", launches)
+            # Primary: RocketLaunch.Live — free, no rate limit
+            try:
+                rll = requests.get(
+                    "https://fdo.rocketlaunch.live/json/launches/next/5",
+                    timeout=12, headers={"User-Agent": "NASASpaceBot/2.0"})
+                if rll.status_code == 200:
+                    rll_data = rll.json().get("result", [])
+                    launches = []
+                    for lc in rll_data:
+                        # Normalize to ll.thespacedevs shape
+                        net_str = lc.get("t0") or lc.get("sort_date") or "TBD"
+                        launches.append({
+                            "name": lc.get("name", "?"),
+                            "rocket": {"configuration": {"name": (lc.get("vehicle") or {}).get("name", "?")}},
+                            "launch_service_provider": {"name": (lc.get("provider") or {}).get("name", "?")},
+                            "net": net_str,
+                            "status": {"abbrev": lc.get("launch_status", {}).get("abbrev", "TBD")},
+                        })
+            except Exception as _le:
+                logger.warning(f"RocketLaunch.Live: {_le}")
+                launches = []
+            # Fallback: thespacedevs
+            if not launches:
+                try:
+                    data = get_json("https://ll.thespacedevs.com/2.2.0/launch/upcoming/?limit=7&ordering=net&mode=list", timeout=15)
+                    launches = data.get("results", [])
+                except Exception as _le2:
+                    logger.warning(f"thespacedevs: {_le2}")
+                    launches = []
+            if launches:
+                cache_set("launches", launches)
         if not launches:
             await safe_edit(q, tx(lang, "no_data"), reply_markup=back_kb(lang, ctx=ctx)); return
         text = tx(lang, "launches_title") + "\n\n"
@@ -2390,8 +2426,12 @@ async def launches_h(update, ctx):
                 stat_a = str((lc.get("status") or {}).get("abbrev", "?"))
                 emoji  = {"Go":"✅","TBD":"❓","TBC":"🔸","Success":"🎉","Failure":"❌"}.get(stat_a, "🕐")
                 try:
-                    dt  = datetime.fromisoformat(net.replace("Z", "+00:00"))
-                    net = dt.strftime("%d.%m.%Y %H:%M UTC")
+                    if net and net not in ("TBD", "?"):
+                        if isinstance(net, (int, float)):
+                            net = datetime.utcfromtimestamp(int(net)).strftime("%d.%m.%Y %H:%M UTC")
+                        else:
+                            dt  = datetime.fromisoformat(str(net).replace("Z", "+00:00").replace(" ", "T"))
+                            net = dt.strftime("%d.%m.%Y %H:%M UTC")
                 except: pass
                 text += f"*{i}. {name}*\n   🚀 {rocket}  |  {prov}\n   ⏰ {net}  {emoji}\n\n"
             except: continue
@@ -2402,7 +2442,7 @@ async def launches_h(update, ctx):
                 params={"q": random.choice(launch_imgs), "media_type": "image", "page_size": 20}, timeout=10)
             items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
             if items:
-                img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
+                img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "").replace("http://", "https://")
                 if img_url:
                     await del_msg(q)
                     await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
@@ -2426,10 +2466,23 @@ async def satellites_h(update, ctx):
         total, active = cached
     else:
         try:
-            sl     = get_json("https://api.spacexdata.com/v5/starlink", timeout=12)
-            total  = len(sl)
-            active = sum(1 for s in sl if isinstance(s, dict) and
-                         not (s.get("spaceTrack") or {}).get("DECAY_DATE"))
+            # Use CelesTrak for fast, reliable counts instead of SpaceX massive v5 JSON
+            # CelesTrak groups endpoint gives active satellites quickly
+            try:
+                r_ct = requests.get(
+                    "https://celestrak.org/SOCRATES/query.php?CODE=ALL&MIN=1&DAYS=7&LIMIT=1&FORMAT=JSON",
+                    timeout=8)
+            except Exception:
+                r_ct = None
+            # Primary: Use SpaceX API with limit to avoid full 600MB download
+            r_sl = requests.get(
+                "https://api.spacexdata.com/v5/starlink?limit=9999",
+                timeout=20, headers={"User-Agent": "NASASpaceBot/2.0"})
+            r_sl.raise_for_status()
+            sl_list = r_sl.json()
+            total  = len(sl_list) if isinstance(sl_list, list) else 6000
+            active = sum(1 for s in sl_list if isinstance(s, dict) and
+                         not (s.get("spaceTrack") or {}).get("DECAY_DATE")) if isinstance(sl_list, list) else 5800
             cache_set("starlink", (total, active))
         except: total = active = "?"
     text = tx(lang, "satellites_text", total=total, active=active)
@@ -2440,7 +2493,7 @@ async def satellites_h(update, ctx):
             params={"q": random.choice(sat_imgs), "media_type": "image", "page_size": 20}, timeout=10)
         items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "").replace("http://", "https://")
             if img_url:
                 await del_msg(q)
                 await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
@@ -2469,7 +2522,7 @@ async def meteors_h(update, ctx):
             params={"q": random.choice(meteor_imgs), "media_type": "image", "page_size": 20}, timeout=12)
         items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "").replace("http://", "https://")
             if img_url:
                 await del_msg(q)
                 await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
@@ -2507,7 +2560,7 @@ async def planets_h(update, ctx):
             params={"q": random.choice(queries), "media_type": "image", "page_size": 20}, timeout=12)
         items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "").replace("http://", "https://")
             if img_url:
                 await del_msg(q)
                 await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
@@ -2539,7 +2592,7 @@ async def moon_h(update, ctx):
             params={"q": random.choice(moon_images), "media_type": "image", "page_size": 20}, timeout=12)
         items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "").replace("http://", "https://")
             if img_url:
                 await del_msg(q)
                 await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
@@ -2565,7 +2618,7 @@ async def telescopes_h(update, ctx):
             params={"q": random.choice(tel_imgs), "media_type": "image", "page_size": 20}, timeout=10)
         items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "").replace("http://", "https://")
             if img_url:
                 await del_msg(q)
                 await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
@@ -2591,7 +2644,7 @@ async def spacefact_h(update, ctx):
             params={"q": random.choice(fact_imgs), "media_type": "image", "page_size": 20}, timeout=10)
         items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "")
+            img_url = (random.choice(items[:15]).get("links", [{}])[0]).get("href", "").replace("http://", "https://")
             if img_url:
                 await del_msg(q)
                 await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
@@ -2709,7 +2762,7 @@ async def live_geomag_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
     try:
         end=date.today().isoformat(); start=(date.today()-timedelta(days=2)).isoformat()
-        storms=nasa_req("/DONKI/GST",{"startDate":start,"endDate":end}) or []
+        raw_storms=nasa_req("/DONKI/GST",{"startDate":start,"endDate":end}); storms=(raw_storms if isinstance(raw_storms,list) else []) 
         text=f"{tx(lang,'live_geomag_title')}\n\n{tx(lang,'geomag_events')} *{len(storms)}*\n\n"
         for s in (storms[-5:] if storms else []):
             t=(s.get("startTime") or "?")[:16].replace("T"," ")
@@ -2740,8 +2793,16 @@ async def live_epic_h(update, ctx):
         data=nasa_req("/EPIC/api/natural")
         if not data:
             await safe_edit(q,tx(lang,"no_img"),reply_markup=back_kb(lang,ctx=ctx)); return
-        item=data[0]; date_str=item.get("date","")[:10].replace("-","/"); img=item.get("image","")
+        item=data[0]; date_raw=item.get("date","")[:10]; date_str=date_raw.replace("-","/"); img=item.get("image","")
+        # PNG archive (primary), fallback to thumbs
         url=f"https://epic.gsfc.nasa.gov/archive/natural/{date_str}/png/{img}.png"
+        # Verify PNG accessible, otherwise use JPEG
+        try:
+            _chk=requests.head(url,timeout=6); 
+            if _chk.status_code not in (200,301,302):
+                url=f"https://epic.gsfc.nasa.gov/archive/natural/{date_str}/jpg/{img}.jpg"
+        except Exception:
+            url=f"https://epic.gsfc.nasa.gov/archive/natural/{date_str}/jpg/{img}.jpg"
         caption=f"{tx(lang,'live_epic_title')}\n📅 {date_str}\n\n{tx(lang,'live_epic_desc')}"
         await del_msg(q)
         try:
@@ -2757,9 +2818,16 @@ async def live_sat_count_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
     total=active="?"
     try:
-        sl=get_json("https://api.spacexdata.com/v5/starlink",timeout=12)
-        if isinstance(sl,list):
-            total=len(sl); active=sum(1 for s in sl if isinstance(s,dict) and not (s.get("spaceTrack") or {}).get("DECAY_DATE"))
+        cached_sl=cache_get("starlink")
+        if cached_sl:
+            total,active=cached_sl
+        else:
+            r_sl=requests.get("https://api.spacexdata.com/v5/starlink?limit=9999",
+                timeout=20, headers={"User-Agent":"NASASpaceBot/2.0"})
+            r_sl.raise_for_status(); sl=r_sl.json()
+            if isinstance(sl,list):
+                total=len(sl); active=sum(1 for s in sl if isinstance(s,dict) and not (s.get("spaceTrack") or {}).get("DECAY_DATE"))
+                cache_set("starlink",(total,active))
     except Exception as e:
         logger.warning(f"Starlink API error: {e}")
     await safe_edit(q,tx(lang,"live_starlink_title",total=total,active=active),
@@ -3855,7 +3923,7 @@ async def exoplanet_alert_h(update, ctx):
     try:
         # NASA Exoplanet Archive — confirmed planets in the last 30 days
         r=requests.get(
-            "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+pl_name,disc_year,discoverymethod,pl_orbper,pl_rade,st_dist+from+pscomppars+where+disc_year>=2025+order+by+rowupdate+desc&format=json",
+            "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+pl_name,disc_year,discoverymethod,pl_orbper,pl_rade,st_dist+from+pscomppars+where+disc_year>=2023+order+by+rowupdate+desc&format=json&maxrec=20",
             timeout=15)
         planets=r.json() if r.status_code==200 else []
     except: planets=[]
@@ -3881,7 +3949,7 @@ async def job_exoplanet_alert(context):
     subs=load_subscribers(); chat_ids=subs.get("exoplanets",[])
     if not chat_ids: return
     try:
-        r=requests.get("https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+pl_name,discoverymethod+from+pscomppars+where+disc_year>=2025+order+by+rowupdate+desc&format=json&maxrec=5",timeout=15)
+        r=requests.get("https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+pl_name,discoverymethod+from+pscomppars+where+disc_year>=2023+order+by+rowupdate+desc&format=json&maxrec=5",timeout=15)
         planets=r.json() if r.status_code==200 else []
         if not planets: return
         msg="🔭 *New Exoplanet Discoveries This Week!*\n\n"
@@ -3950,6 +4018,26 @@ async def daily_horoscope_h(update, ctx):
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # BLOCK: DAILY CHALLENGE CONV HANDLER                                            ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
+
+def nasa_image_search(query: str, count: int = 1) -> str:
+    """Synchronous helper: search NASA Image API and return first image URL, or empty string."""
+    try:
+        import requests as _req
+        r = _req.get("https://images-api.nasa.gov/search",
+            params={"q": query, "media_type": "image", "page_size": 20},
+            timeout=10)
+        r.raise_for_status()
+        items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
+        if items:
+            import random as _rand
+            item = _rand.choice(items[:15])
+            return (item.get("links", [{}])[0]).get("href", "")
+    except Exception as e:
+        import logging as _log
+        _log.getLogger(__name__).warning(f"nasa_image_search({query!r}): {e}")
+    return ""
+# ── End: nasa_image_search ────────────────────────────────────────────────────
+
 async def daily_challenge_start(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     q_idx=date.today().toordinal()%len(CHALLENGE_DATA)
@@ -3957,15 +4045,18 @@ async def daily_challenge_start(update, ctx):
     chall=CHALLENGE_DATA[q_idx]
     await safe_edit(q,tx(lang,"challenge_loading"))
     await del_msg(q)
-    try:
-        img=nasa_image_search(chall["img_q"],1)
-        caption=f"{tx(lang,'challenge_title')}\n\n{tx(lang,'challenge_question')}"
-        await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img,caption=caption,
-            parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
-    except:
+    caption_c=f"{tx(lang,'challenge_title')}\n\n{tx(lang,'challenge_question')}"
+    img=nasa_image_search(chall["img_q"],1)
+    if img:
+        try:
+            await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img,caption=caption_c,
+                parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
+        except Exception:
+            await ctx.bot.send_message(chat_id=q.message.chat_id,
+                text=caption_c,parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
+    else:
         await ctx.bot.send_message(chat_id=q.message.chat_id,
-            text=f"{tx(lang,'challenge_title')}\n\n{tx(lang,'challenge_question')}",
-            parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
+            text=caption_c,parse_mode="Markdown",reply_markup=challenge_kb(lang,q_idx))
 
 async def challenge_answer_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -4119,7 +4210,7 @@ async def favorites_view_h(update, ctx):
         lines.append(f"{i+1}. {link} _{f['date']}_")
     lines.append("\n"+tx(lang,"fav_total",n=len(my_favs)))
     kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"fav_clear"),callback_data="favorites_clear"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
-    await safe_edit(q,"\n".join(lines)[:4096],reply_markup=kb,disable_web_page_preview=True)
+    await safe_edit(q,"\n".join(lines)[:4096],reply_markup=kb)
 
 async def favorites_clear_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -4340,20 +4431,40 @@ async def iss_city_received(update, ctx):
     city_name,lat,lon=match
     # Get ISS passes via Heavens Above (open-notify is deprecated/dead)
     passes=[]
+    # Try Open Notify pass times (free, no key required)
     try:
-        # Try n2yo free API (CORS-safe, no key needed for basic queries)
-        r=requests.get(
-            f"https://api.n2yo.com/rest/v1/satellite/visualpasses/25544/{lat}/{lon}/0/10/300/",
+        r_on = requests.get(
+            f"https://api.open-notify.org/iss-pass.json?lat={lat}&lon={lon}&n=5",
             timeout=10, headers={"User-Agent":"NASASpaceBot/2.0"}
         )
-        if r.status_code==200:
-            data=r.json()
-            for p in (data.get("passes") or [])[:5]:
-                rise_ts=p.get("startUTC",0); dur=p.get("duration",0)
-                rise_dt=datetime.utcfromtimestamp(rise_ts).strftime("%d.%m %H:%M")
-                mag=p.get("mag","?"); dur_min=f"{dur//60}m{dur%60:02d}s"
-                passes.append(f"🛸 *{rise_dt} UTC*  |  ⏱ {dur_min}  |  ✨ mag {mag}")
-    except: pass
+        if r_on.status_code == 200:
+            on_data = r_on.json()
+            for p in (on_data.get("response") or [])[:5]:
+                rise_ts = p.get("risetime", 0)
+                dur = p.get("duration", 0)
+                rise_dt = datetime.utcfromtimestamp(rise_ts).strftime("%d.%m %H:%M")
+                dur_min = f"{dur//60}m{dur%60:02d}s"
+                passes.append(f"🛸 *{rise_dt} UTC*  |  ⏱ {dur_min}")
+    except Exception as _e:
+        logger.warning(f"open-notify iss-pass: {_e}")
+    # If Open Notify failed, try n2yo with API key (if configured)
+    if not passes:
+        try:
+            n2yo_key = os.environ.get("N2YO_API_KEY", "")
+            if n2yo_key:
+                r_n2 = requests.get(
+                    f"https://api.n2yo.com/rest/v1/satellite/visualpasses/25544/{lat}/{lon}/0/5/300/&apiKey={n2yo_key}",
+                    timeout=10, headers={"User-Agent":"NASASpaceBot/2.0"}
+                )
+                if r_n2.status_code == 200:
+                    data = r_n2.json()
+                    for p in (data.get("passes") or [])[:5]:
+                        rise_ts = p.get("startUTC", 0); dur = p.get("duration", 0)
+                        rise_dt = datetime.utcfromtimestamp(rise_ts).strftime("%d.%m %H:%M")
+                        dur_min = f"{dur//60}m{dur%60:02d}s"
+                        passes.append(f"🛸 *{rise_dt} UTC*  |  ⏱ {dur_min}")
+        except Exception as _e2:
+            logger.warning(f"n2yo api: {_e2}")
     if not passes:
         # Fallback: calculate from current position
         try:
@@ -4397,7 +4508,7 @@ async def meteorite_map_h(update, ctx):
             except: mass_t=f"{mass} g"
             geo=m.get("geolocation",{})
             lat=geo.get("latitude","?"); lon=geo.get("longitude","?")
-            try: map_link=f"[📍]( https://www.google.com/maps?q={lat},{lon})"
+            try: map_link=f"[📍](https://www.google.com/maps?q={lat},{lon})"
             except: map_link=""
             lines.append(f"☄️ *{name}* ({year}) — {mass_t} — {rec} {map_link}")
         text="\n".join(lines)+"\n\n[🔗 Full NASA Database](https://data.nasa.gov/resource/gh4g-9sfh.json)"
@@ -4409,7 +4520,7 @@ async def meteorite_map_h(update, ctx):
               "☄️ *ALH84001* (Antarctica) — Martian meteorite with possible microfossils\n"
               "☄️ *Willamette* (USA) — 15.5 tons — largest in North America\n\n"
               "[🔗 NASA Meteorite Database](https://data.nasa.gov/resource/gh4g-9sfh.json)")
-    await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"meteorite_map",ctx),disable_web_page_preview=True)
+    await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"meteorite_map",ctx))
 # ── End: METEORITE MAP ────────────────────────────────────────────────────────
 
 
@@ -4483,7 +4594,7 @@ async def mission_detail_h(update, ctx):
           f"_{m['desc']}_\n\n"
           f"[🔗 Learn more]({m['url']})")
     kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"missions_all"),callback_data="mission_status"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
-    await safe_edit(q,text[:4096],reply_markup=kb,disable_web_page_preview=True)
+    await safe_edit(q,text[:4096],reply_markup=kb)
 # ── End: MISSION STATUS HANDLER ───────────────────────────────────────────────
 
 
