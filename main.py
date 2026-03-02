@@ -3703,18 +3703,24 @@ async def sat_detail_h(update, ctx):
             pos=get_iss_position()
             pos_text=f"\n🌍 *Live position:* `{pos['lat']:+.3f}°, {pos['lon']:+.3f}°`"
             url_text=f"\n[📍 Live map](https://www.google.com/maps?q={pos['lat']},{pos['lon']})"
+        elif sat["alt_km"] > 50000:
+            # L2 / high-orbit satellites: no real-time position available
+            pos_text=f"\n📍 Orbit: {sat['alt_km']:,} km from Earth (deep space — no live tracking)"
         else:
-            r=requests.get(f"https://api.wheretheiss.at/v1/satellites/{sat['norad']}",timeout=8)
-            if r.status_code==200:
-                d=r.json()
-                lat=d.get("latitude",0); lon=d.get("longitude",0)
-                alt=d.get("altitude",sat["alt_km"]); spd=d.get("velocity",0)
-                pos_text=f"\n🌍 *Live:* `{lat:+.3f}°, {lon:+.3f}°`\n⬆️ Alt: {alt:.0f} km  |  ⚡ {spd:.0f} km/h"
-                url_text=f"\n[📍 Map](https://www.google.com/maps?q={lat},{lon})"
-    except: pos_text=f"\n📍 Orbit: {sat['alt_km']:,} km"
+            # LEO satellites: try wheretheiss.at (supports any NORAD ID)
+            r=requests.get(f"https://api.wheretheiss.at/v1/satellites/{sat['norad']}",timeout=10)
+            r.raise_for_status()
+            d=r.json()
+            lat=d.get("latitude",0); lon=d.get("longitude",0)
+            alt=d.get("altitude",sat["alt_km"]); spd=d.get("velocity",0)
+            pos_text=f"\n🌍 *Live:* `{lat:+.3f}°, {lon:+.3f}°`\n⬆️ Alt: {alt:.0f} km  |  ⚡ {spd:.0f} km/h"
+            url_text=f"\n[📍 Map](https://www.google.com/maps?q={lat},{lon})"
+    except Exception as e:
+        logger.warning(f"Satellite pos error ({sat_key}): {e}")
+        pos_text=f"\n📍 Orbit: ~{sat['alt_km']:,} km (live data unavailable)"
     text=(f"{sat['emoji']} *{sat['name']}*\n"
           f"🚀 Launched: {sat['launched']}\n"
-          f"🔄 Orbital period: {sat.get('period_min',92)} min\n"
+          f"🔄 Period: {sat.get('period_min',92):.0f} min\n"
           f"{pos_text}\n\n_{sat['desc']}_{url_text}")
     await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"satellite_tracker",ctx))
 # ── End: SATELLITE TRACKER HANDLER ───────────────────────────────────────────
@@ -4570,18 +4576,18 @@ CAT_MAP.update(NEW_CAT_MAP)
 # BLOCK: CALLBACK ROUTER ADDITIONS                                               ║
 # These are extra patterns — add handling to callback_router() in part2:        ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
-async def route_new_callbacks(q, cb, ctx, lang):
+async def route_new_callbacks(update, cb, ctx, lang):
     """Returns True if this function handled the callback, False otherwise."""
-    if cb.startswith("sat_"):           await sat_detail_h(q._update_ref,ctx); return True
-    if cb.startswith("mission_"):       await mission_detail_h(q._update_ref,ctx); return True
-    if cb.startswith("flight_target_"): await flight_target_h(q._update_ref,ctx); return True
-    if cb.startswith("flight_calc_"):   await flight_calc_h(q._update_ref,ctx); return True
-    if cb.startswith("dict_"):          await dict_term_h(q._update_ref,ctx); return True
-    if cb.startswith("challenge_ans_"): await challenge_answer_h(q._update_ref,ctx); return True
-    if cb=="favorites_save":            await favorites_save_h(q._update_ref,ctx); return True
-    if cb=="smart_set_kp":              await smart_set_kp_start(q._update_ref,ctx); return True
-    if cb=="smart_set_ld":              await smart_set_ld_start(q._update_ref,ctx); return True
-    if cb=="smart_set_eq":              await smart_set_eq_start(q._update_ref,ctx); return True
+    if cb.startswith("sat_"):           await sat_detail_h(update,ctx); return True
+    if cb.startswith("mission_"):       await mission_detail_h(update,ctx); return True
+    if cb.startswith("flight_target_"): await flight_target_h(update,ctx); return True
+    if cb.startswith("flight_calc_"):   await flight_calc_h(update,ctx); return True
+    if cb.startswith("dict_"):          await dict_term_h(update,ctx); return True
+    if cb.startswith("challenge_ans_"): await challenge_answer_h(update,ctx); return True
+    if cb=="favorites_save":            await favorites_save_h(update,ctx); return True
+    if cb=="smart_set_kp":              await smart_set_kp_start(update,ctx); return True
+    if cb=="smart_set_ld":              await smart_set_ld_start(update,ctx); return True
+    if cb=="smart_set_eq":              await smart_set_eq_start(update,ctx); return True
     if cb=="cat_profile":
         await safe_answer(q); ctx.user_data["last_cat"]="cat_profile"
         await safe_edit(q,tx(lang,"title_profile")+"\n\n"+tx(lang,"choose_sec"),reply_markup=profile_kb(lang)); return True
@@ -4657,7 +4663,7 @@ async def callback_router(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await notif_toggle_h(update,ctx); return
     if cb.startswith("quiz_ans_"):
         await quiz_answer_h(update,ctx); return
-    if await route_new_callbacks(q, cb, ctx, lang):
+    if await route_new_callbacks(update, cb, ctx, lang):
         return
     if cb in STATIC_TEXTS:
         await safe_answer(q)
