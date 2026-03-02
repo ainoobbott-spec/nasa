@@ -29,8 +29,8 @@ PORT           = int(os.environ.get("PORT", 10000))
 PLANET_DATE, PLANET_WEIGHT, PLANET_CHOICE = range(3)
 HOROSCOPE_BDAY = 10
 CAPSULE_MSG    = 20
-HOROSCOPE_BDAY = 10
-CAPSULE_MSG    = 20
+# (duplicate removed)
+# (duplicate removed)
 ISS_CITY      = 30
 DICT_TERM     = 31
 QA_QUESTION   = 32
@@ -580,7 +580,7 @@ T = {
     "rocket_play_again":"🔄 Играть снова",
     "qa_chars_error":"❌ 3–500 символов","qa_thinking":"🤔 Думаю...","qa_cancelled":"❌ Отменено",
     "qa_ask_another":"❓ Ещё вопрос","qa_api_error":"❌ API Клод не настроен.",
-    "fav_saved":"⭐ Сохранено!","fav_max":"❌ Максимум 50 избранных",
+    "fav_saved":"⭐ Сохранено!","fav_save_btn":"⭐ Сохранить","fav_max":"❌ Максимум 50 избранных",
     "fav_title":"⭐ *Избранное*","fav_empty":"Сохранённых фото пока нет.\nНажми ⭐ на любом APOD, чтобы сохранить!",
     "fav_your":"⭐ *Твоё избранное*","fav_total":"_Всего: {n} фото_",
     "fav_clear":"🗑 Удалить всё","fav_cleared":"🗑 Избранное очищено.",
@@ -826,7 +826,7 @@ T = {
     "rocket_play_again":"🔄 Play again",
     "qa_chars_error":"❌ 3–500 chars","qa_thinking":"🤔 Thinking...","qa_cancelled":"❌ Cancelled",
     "qa_ask_another":"❓ Ask another","qa_api_error":"❌ Claude API key not configured.",
-    "fav_saved":"⭐ Saved!","fav_max":"❌ Max 50 favorites",
+    "fav_saved":"⭐ Saved!","fav_save_btn":"⭐ Save","fav_max":"❌ Max 50 favorites",
     "fav_title":"⭐ *Favorites*","fav_empty":"No saved photos yet.\nTap ⭐ on any APOD to save it!",
     "fav_your":"⭐ *Your Favorites*","fav_total":"_Total: {n} photos_",
     "fav_clear":"🗑 Clear all","fav_cleared":"🗑 Favorites cleared.",
@@ -1021,7 +1021,7 @@ T = {
     "live_solar_wind_title":"🔴 *LIVE: רוח סולארית*",
     "live_kp_title":"🔴 *LIVE: מדד Kp*",
     "live_flares_title":"🔴 *LIVE: להבות סולאריות*",
-    "live_iss_title":"🔴 *LIVE: ISS*",
+    "live_iss_title":"🔴 *LIVE: תחנת ISS*",
     "live_radiation_title":"🔴 *LIVE: קרינה*",
     "live_aurora_title":"🔴 *תחזית זוהר*",
     "live_geomag_title":"🔴 *סערות גיאומגנטיות (יומיים)*",
@@ -1057,7 +1057,7 @@ T = {
     "rocket_play_again":"🔄 שחק שוב",
     "qa_chars_error":"❌ 3–500 תווים","qa_thinking":"🤔 חושב...","qa_cancelled":"❌ בוטל",
     "qa_ask_another":"❓ שאל עוד","qa_api_error":"❌ מפתח API לא מוגדר.",
-    "fav_saved":"⭐ נשמר!","fav_max":"❌ מקסימום 50 מועדפים",
+    "fav_saved":"⭐ נשמר!","fav_save_btn":"⭐ שמור","fav_max":"❌ מקסימום 50 מועדפים",
     "fav_title":"⭐ *מועדפים*","fav_empty":"אין תמונות שמורות עדיין.\nלחץ ⭐ על כל APOD כדי לשמור!",
     "fav_your":"⭐ *המועדפים שלך*","fav_total":"_סה\"כ: {n} תמונות_",
     "fav_clear":"🗑 מחק הכל","fav_cleared":"🗑 המועדפים נמחקו.",
@@ -1288,7 +1288,7 @@ T = {
     "rocket_play_again":"🔄 العب مرة أخرى",
     "qa_chars_error":"❌ 3–500 حرف","qa_thinking":"🤔 أفكر...","qa_cancelled":"❌ تم الإلغاء",
     "qa_ask_another":"❓ اسأل مجدداً","qa_api_error":"❌ مفتاح API غير مُعدّ.",
-    "fav_saved":"⭐ تم الحفظ!","fav_max":"❌ الحد الأقصى 50 مفضلة",
+    "fav_saved":"⭐ تم الحفظ!","fav_save_btn":"⭐ حفظ","fav_max":"❌ الحد الأقصى 50 مفضلة",
     "fav_title":"⭐ *المفضلة*","fav_empty":"لا توجد صور محفوظة بعد.\nاضغط ⭐ على أي APOD لحفظها!",
     "fav_your":"⭐ *مفضلاتك*","fav_total":"_الإجمالي: {n} صورة_",
     "fav_clear":"🗑 مسح الكل","fav_cleared":"🗑 تم مسح المفضلة.",
@@ -1871,7 +1871,7 @@ QUIZ_QUESTIONS = [
      "options":["Andromeda","Triangulum","Milky Way","Sombrero"],"answer":2,
      "exp":{"ru":"Млечный Путь — 200–400 млрд звёзд.","en":"Milky Way — 200–400 billion stars.","he":"שביל החלב.","ar":"درب التبانة."}},
     {"q":{"ru":"Световой год — это мера...","en":"A light-year measures...","he":"שנת אור מודדת...","ar":"السنة الضوئية تقيس..."},
-     "options":["Time/Времени","Distance/Расстояния","Mass/Массы","Speed/Скорости"],"answer":1,
+     "options":["Time","Distance","Mass","Speed"],"answer":1,
      "exp":{"ru":"Расстояния (~9.46 трлн км). Не время!","en":"Distance (~9.46 trillion km). Not time!","he":"מרחק (~9.46 טריליון ק\"מ).","ar":"مسافة (~9.46 تريليون كم)."}},
     {"q":{"ru":"Кто первым вышел в открытый космос?","en":"Who first walked in space?","he":"מי יצא לחלל ראשון?","ar":"من مشى في الفضاء أولاً؟"},
      "options":["Armstrong","Gagarin","Leonov","Aldrin"],"answer":2,
@@ -2045,7 +2045,7 @@ async def _send_apod(q, ctx, params=None):
         copy_   = data.get("copyright", "NASA").strip().replace("\n", " ")
         caption = f"🌌 *{title}*\n📅 {d}  |  © {copy_}\n\n{expl}…\n\n[🔗 HD]({hdurl})"
         # Build keyboard with ⭐ Save to favorites button
-        save_btn = InlineKeyboardButton("⭐ Сохранить / Save", callback_data="favorites_save")
+        save_btn = InlineKeyboardButton(tx(lang, "fav_save_btn"), callback_data="favorites_save")
         if not params:
             kb = InlineKeyboardMarkup([
                 [InlineKeyboardButton(tx(lang, "btn_more_rnd"), callback_data="apod_random"), save_btn],
@@ -3630,8 +3630,8 @@ def dict_kb(lang):
 def course_kb(lang):
     cp=load_course(); cid_str="self"
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎓 Подписаться на курс",callback_data="course_subscribe")],
-        [InlineKeyboardButton("📚 Просмотреть все уроки",callback_data="course_browse")],
+        [InlineKeyboardButton(tx(lang,"course_subscribe_btn"),callback_data="course_subscribe")],
+        [InlineKeyboardButton(tx(lang,"course_browse_btn"),callback_data="course_browse")],
         [InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")],
     ])
 # ── End: NEW KEYBOARDS ────────────────────────────────────────────────────────
@@ -4797,10 +4797,3 @@ if __name__=="__main__":
     init_worker()
     flask_app.run(host="0.0.0.0",port=PORT)
 # ── End: BOT SETUP & STARTUP ──────────────────────────────────────────────────
-
-
-
-
-
-
-
