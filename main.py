@@ -325,74 +325,75 @@ def _parse_atom(root, src, max_items):
     return articles
 
 
+def _fetch_one_url(url: str, headers: dict, timeout: int = 12):
+    """Fetch a single URL; return (response_content_bytes, final_url) or (None, url) on failure."""
+    try:
+        r = requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)
+        r.raise_for_status()
+        return r.content, r.url
+    except Exception as e:
+        logger.debug(f"_fetch_one_url {url}: {e}")
+        return None, url
+
+def _rss_user_agents():
+    """Return a list of User-Agent strings to rotate through on failure."""
+    return [
+        "Mozilla/5.0 (compatible; NASASpaceBot/2.0; +https://t.me/your_bot)",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)",
+        "Googlebot/2.1 (+http://www.google.com/bot.html)",
+    ]
+
 def fetch_rss(source_key: str, max_items: int = 30) -> list:
     """
-    Fetch and parse RSS or Atom feed.
-    FIX: Now handles both RSS 2.0 and Atom 1.0 formats.
-    FIX: Tries url_fallback if primary URL fails.
-    FIX: Better headers to avoid 403 blocks.
-    Returns list of article dicts or [] on failure.
+    Fetch and parse RSS or Atom feed. Stable multi-fallback implementation:
+    - Tries primary URL, then url_fallback
+    - Rotates User-Agent on failure
+    - Handles both RSS 2.0 and Atom 1.0
+    - Returns [] on all failures (never raises)
     """
     src = NEWS_SOURCES.get(source_key)
     if not src: return []
 
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36 NASASpaceBot/2.0"
-        ),
-        "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
+    base_headers = {
+        "Accept": "application/rss+xml,application/atom+xml,application/xml,text/xml,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
         "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
     }
 
     urls_to_try = [src["url"]]
     if src.get("url_fallback"):
         urls_to_try.append(src["url_fallback"])
 
+    agents = _rss_user_agents()
+
     for url in urls_to_try:
-        try:
-            for _attempt in range(2):
-                try:
-                    r = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
-                    break
-                except requests.exceptions.Timeout:
-                    if _attempt == 0: continue
-                    raise
-            r.raise_for_status()
+        for agent in agents[:2]:  # try 2 agents per URL
+            headers = {**base_headers, "User-Agent": agent}
+            content, _ = _fetch_one_url(url, headers, timeout=14)
+            if content is None:
+                continue
+            try:
+                root = ET.fromstring(content)
+                tag  = root.tag.lower()
+                is_atom = (
+                    tag == "feed" or tag.endswith("}feed") or
+                    "atom" in tag or
+                    "{http://www.w3.org/2005/Atom}" in root.tag
+                )
+                articles = (_parse_atom(root, src, max_items) if is_atom
+                            else _parse_rss_items((root.find("channel") or root).findall("item"), src, max_items))
+                if articles:
+                    rss_cache_set(source_key, articles)
+                    logger.info(f"fetch_rss {source_key}: {len(articles)} articles")
+                    return articles
+            except ET.ParseError as e:
+                logger.warning(f"fetch_rss {source_key} XML parse error ({url}): {e}")
+            except Exception as e:
+                logger.warning(f"fetch_rss {source_key} parse error ({url}): {e}")
 
-            root = ET.fromstring(r.content)
-            tag  = root.tag.lower()
-
-            # Detect Atom: root tag is <feed> or contains "atom" namespace
-            is_atom = (
-                tag == "feed"
-                or tag.endswith("}feed")
-                or "atom" in tag
-                or "{http://www.w3.org/2005/Atom}" in root.tag
-            )
-
-            if is_atom:
-                articles = _parse_atom(root, src, max_items)
-            else:
-                channel  = root.find("channel") or root
-                items    = channel.findall("item")
-                articles = _parse_rss_items(items, src, max_items)
-
-            if articles:
-                logger.info(f"fetch_rss {source_key}: got {len(articles)} articles from {url}")
-                return articles
-            else:
-                logger.warning(f"fetch_rss {source_key}: parsed 0 articles from {url}")
-
-        except ET.ParseError as e:
-            logger.error(f"fetch_rss {source_key} XML parse error at {url}: {e}")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"fetch_rss {source_key} request error at {url}: {e}")
-        except Exception as e:
-            logger.error(f"fetch_rss {source_key} unknown error at {url}: {e}")
-
+    logger.error(f"fetch_rss {source_key}: all URLs failed")
     return []
 # ── End: RSS / ATOM PARSING HELPERS ───────────────────────────────────────────
 
@@ -593,7 +594,7 @@ T = {
     "fav_saved":"⭐ Сохранено!","fav_save_btn":"⭐ Сохранить","fav_save_news":"⭐ В избранное","fav_max":"❌ Максимум 50 избранных",
     "fav_title":"⭐ *Избранное*","fav_empty":"Сохранённых фото пока нет.\nНажми ⭐ на любом APOD, чтобы сохранить!",
     "fav_your":"⭐ *Твоё избранное*","fav_total":"_Всего: {n} фото_",
-    "fav_clear":"🗑 Удалить всё","fav_cleared":"🗑 Избранное очищено.",
+    "fav_clear":"🗑 Удалить всё","fav_cleared":"🗑 Избранное очищено.","fav_del_one":"🗑 Удалить","fav_view_btn":"👁 Открыть","fav_page_prev":"◀️ Назад","fav_page_next":"▶️ Далее","fav_del_confirm":"🗑 Удалено из избранного.","fav_no_url":"❌ У этого элемента нет ссылки.","fav_type_apod":"🌌 APOD","fav_type_news":"📰 Статья","fav_hint":"Нажми 👁 чтобы открыть фото / 🗑 удалить.","fav_empty_news":"Сохранённых статей пока нет.\nНажми ⭐ на любой новости.","fav_already":"⭐ Уже в избранном",
     "smart_title":"🔔 *Настройки Smart-оповещений*",
     "smart_kp_desc":"⚡ Оповещение Kp при ≥ *{v}* (видно сияние)",
     "smart_ast_desc":"☄️ Оповещение об астероиде при < *{v}* LD",
@@ -839,7 +840,7 @@ T = {
     "fav_saved":"⭐ Saved!","fav_save_btn":"⭐ Save","fav_save_news":"⭐ Save article","fav_max":"❌ Max 50 favorites",
     "fav_title":"⭐ *Favorites*","fav_empty":"No saved photos yet.\nTap ⭐ on any APOD to save it!",
     "fav_your":"⭐ *Your Favorites*","fav_total":"_Total: {n} photos_",
-    "fav_clear":"🗑 Clear all","fav_cleared":"🗑 Favorites cleared.",
+    "fav_clear":"🗑 Clear all","fav_cleared":"🗑 Favorites cleared.","fav_del_one":"🗑 Remove","fav_view_btn":"👁 View","fav_page_prev":"◀️ Back","fav_page_next":"▶️ Next","fav_del_confirm":"🗑 Removed from favorites.","fav_no_url":"❌ This item has no link.","fav_type_apod":"🌌 APOD","fav_type_news":"📰 Article","fav_hint":"Tap 👁 to view · 🗑 to remove.","fav_empty_news":"No saved articles yet.\nTap ⭐ on any news article.","fav_already":"⭐ Already saved",
     "smart_title":"🔔 *Smart Alerts Settings*",
     "smart_kp_desc":"⚡ Kp alert when ≥ *{v}* (aurora visible)",
     "smart_ast_desc":"☄️ Asteroid alert when < *{v}* LD",
@@ -1070,7 +1071,7 @@ T = {
     "fav_saved":"⭐ נשמר!","fav_save_btn":"⭐ שמור","fav_save_news":"⭐ שמור כתבה","fav_max":"❌ מקסימום 50 מועדפים",
     "fav_title":"⭐ *מועדפים*","fav_empty":"אין תמונות שמורות עדיין.\nלחץ ⭐ על כל APOD כדי לשמור!",
     "fav_your":"⭐ *המועדפים שלך*","fav_total":"_סה\"כ: {n} תמונות_",
-    "fav_clear":"🗑 מחק הכל","fav_cleared":"🗑 המועדפים נמחקו.",
+    "fav_clear":"🗑 מחק הכל","fav_cleared":"🗑 המועדפים נמחקו.","fav_del_one":"🗑 הסר","fav_view_btn":"👁 פתח","fav_page_prev":"◀️ הקודם","fav_page_next":"▶️ הבא","fav_del_confirm":"🗑 הוסר מהמועדפים.","fav_no_url":"❌ אין קישור לפריט זה.","fav_type_apod":"🌌 APOD","fav_type_news":"📰 כתבה","fav_hint":"לחץ 👁 לפתיחה · 🗑 למחיקה.","fav_empty_news":"אין כתבות שמורות עדיין.","fav_already":"⭐ כבר נשמר",
     "smart_title":"🔔 *הגדרות התראות חכמות*",
     "smart_kp_desc":"⚡ התראת Kp כש- ≥ *{v}* (זוהר נראה)",
     "smart_ast_desc":"☄️ התראת אסטרואיד כש- < *{v}* LD",
@@ -1301,7 +1302,7 @@ T = {
     "fav_saved":"⭐ تم الحفظ!","fav_save_btn":"⭐ حفظ","fav_save_news":"⭐ حفظ المقالة","fav_max":"❌ الحد الأقصى 50 مفضلة",
     "fav_title":"⭐ *المفضلة*","fav_empty":"لا توجد صور محفوظة بعد.\nاضغط ⭐ على أي APOD لحفظها!",
     "fav_your":"⭐ *مفضلاتك*","fav_total":"_الإجمالي: {n} صورة_",
-    "fav_clear":"🗑 مسح الكل","fav_cleared":"🗑 تم مسح المفضلة.",
+    "fav_clear":"🗑 مسح الكل","fav_cleared":"🗑 تم مسح المفضلة.","fav_del_one":"🗑 حذف","fav_view_btn":"👁 فتح","fav_page_prev":"◀️ السابق","fav_page_next":"▶️ التالي","fav_del_confirm":"🗑 تمت إزالته من المفضلة.","fav_no_url":"❌ لا يوجد رابط لهذا العنصر.","fav_type_apod":"🌌 APOD","fav_type_news":"📰 مقالة","fav_hint":"اضغط 👁 للفتح · 🗑 للحذف.","fav_empty_news":"لا توجد مقالات محفوظة بعد.","fav_already":"⭐ محفوظ بالفعل",
     "smart_title":"🔔 *إعدادات التنبيهات الذكية*",
     "smart_kp_desc":"⚡ تنبيه Kp عند ≥ *{v}* (شفق مرئي)",
     "smart_ast_desc":"☄️ تنبيه كويكب عند < *{v}* LD",
@@ -1392,12 +1393,25 @@ def strip_html(t): return re.sub(r'<[^>]+>', '', t or '')
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # BLOCK: NASA API & HTTP HELPERS                                                 ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
-def nasa_req(path, params=None):
+def nasa_req(path, params=None, _retry=2):
+    """Call NASA API. Retries up to _retry times on 429 rate-limit responses."""
+    import time as _time
     p = {"api_key": NASA_API_KEY}
     if params: p.update(params)
-    r = requests.get(f"{NASA_BASE}{path}", params=p, timeout=15,
-                     headers={"User-Agent":"NASASpaceBot/2.0"})
-    r.raise_for_status(); return r.json()
+    for attempt in range(_retry + 1):
+        try:
+            r = requests.get(f"{NASA_BASE}{path}", params=p, timeout=15,
+                             headers={"User-Agent":"NASASpaceBot/2.0"})
+            if r.status_code == 429 and attempt < _retry:
+                wait = int(r.headers.get("Retry-After", 2))
+                _time.sleep(min(wait, 5))
+                continue
+            r.raise_for_status()
+            return r.json()
+        except requests.exceptions.Timeout:
+            if attempt < _retry: continue
+            raise
+    raise RuntimeError(f"nasa_req {path}: failed after {_retry+1} attempts")
 
 def get_json(url, params=None, timeout=12):
     r = requests.get(url, params=params, timeout=timeout,
@@ -1428,14 +1442,25 @@ def get_iss_position() -> dict:
     raise RuntimeError("ISS position unavailable (both APIs failed)")
 
 def get_iss_crew() -> list:
-    """Fetch ISS crew list; returns [] on failure."""
-    try:
-        r = requests.get("https://api.open-notify.org/astros.json", timeout=8)
-        if r.ok:
-            return [p["name"] for p in r.json().get("people", []) if "ISS" in str(p.get("craft", "")) or "International" in str(p.get("craft", ""))]
-    except Exception:
-        pass
-    return []
+    """Fetch ISS crew list; returns generic list on failure."""
+    # Try open-notify
+    for url in [
+        "https://api.open-notify.org/astros.json",
+        "https://corquaid.github.io/international-space-station-APIs/JSON/people-in-space.json",
+    ]:
+        try:
+            r = requests.get(url, timeout=8, headers={"User-Agent":"NASASpaceBot/2.0"})
+            if r.ok:
+                data = r.json()
+                people = data.get("people") or data.get("people_in_space") or []
+                crew = [p.get("name","?") for p in people
+                        if "ISS" in str(p.get("craft","")) or "International" in str(p.get("craft",""))
+                        or p.get("station","").upper() in ("ISS","INTERNATIONAL SPACE STATION")]
+                if crew:
+                    return crew
+        except Exception:
+            continue
+    return ["ISS crew (data unavailable)"]
 # ── End: ISS POSITION & CREW HELPERS ─────────────────────────────────────────
 
 
@@ -1445,15 +1470,21 @@ def get_iss_crew() -> list:
 _cache: dict = {}
 CACHE_TTL = 1800
 
-def cache_get(key: str):
+def cache_get(key: str, ttl: int = None):
     if key in _cache:
         ts, data = _cache[key]
-        if (datetime.utcnow().timestamp() - ts) < CACHE_TTL:
+        effective_ttl = ttl if ttl is not None else CACHE_TTL
+        if (datetime.utcnow().timestamp() - ts) < effective_ttl:
             return data
+        else:
+            del _cache[key]  # clean expired entries
     return None
 
-def cache_set(key: str, data):
+def cache_set(key: str, data, ttl: int = None):
     _cache[key] = (datetime.utcnow().timestamp(), data)
+
+def cache_invalidate(key: str):
+    _cache.pop(key, None)
 # ── End: IN-MEMORY CACHE ──────────────────────────────────────────────────────
 
 
@@ -1988,16 +2019,36 @@ STATIC_TEXTS = {
 # BLOCK: NASA IMAGE SEARCH HELPER                                                ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def send_nasa_image(q, ctx, queries, cb=""):
+    """Search NASA Images API and send a random matching photo. Tries multiple queries on failure."""
     lang = get_lang(ctx)
-    try:
-        r = requests.get("https://images-api.nasa.gov/search",
-            params={"q": random.choice(queries), "media_type": "image", "page_size": 40},
-            timeout=12)
-        r.raise_for_status()
-        items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
-        if not items:
-            await safe_edit(q, tx(lang, "no_img"), reply_markup=back_kb(lang, ctx=ctx)); return
-        item    = random.choice(items[:25])
+    nasa_headers = {"User-Agent": "NASASpaceBot/2.0", "Accept": "application/json"}
+    tried = set()
+    items_found = []
+    # Try up to 3 different query terms
+    queries_shuffled = random.sample(queries, min(len(queries), 3))
+    for q_term in queries_shuffled:
+        if q_term in tried: continue
+        tried.add(q_term)
+        try:
+            r = requests.get("https://images-api.nasa.gov/search",
+                params={"q": q_term, "media_type": "image", "page_size": 40},
+                headers=nasa_headers, timeout=12)
+            r.raise_for_status()
+            items_found = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
+            if items_found: break
+        except Exception as _e:
+            logger.debug(f"send_nasa_image query {q_term!r}: {_e}")
+            continue
+
+    if not items_found:
+        await safe_edit(q, tx(lang, "no_img"), reply_markup=back_kb(lang, ctx=ctx)); return
+
+    # Pick random item, try up to 3 different items if photo send fails
+    candidate_items = random.sample(items_found[:25], min(25, len(items_found)))
+    kb = action_kb(lang, cb, "btn_another", ctx) if cb else back_kb(lang, ctx=ctx)
+    await del_msg(q)
+
+    for item in candidate_items[:3]:
         data    = item.get("data", [{}])[0]
         title   = data.get("title", "NASA")
         desc    = strip_html(data.get("description", ""))[:400]
@@ -2005,18 +2056,25 @@ async def send_nasa_image(q, ctx, queries, cb=""):
         center  = data.get("center", "NASA")
         img_url = (item.get("links", [{}])[0]).get("href", "").replace("http://", "https://")
         caption = f"*{title}*\n📅 {date_c}  |  🏛 {center}\n\n{desc + '…' if desc else ''}"
-        kb = action_kb(lang, cb, "btn_another", ctx) if cb else back_kb(lang, ctx=ctx)
-        await del_msg(q)
-        if img_url:
-            try:
-                await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
-                    caption=caption[:1024], parse_mode="Markdown", reply_markup=kb)
-                return
-            except: pass
+        if not img_url: continue
+        try:
+            await ctx.bot.send_photo(chat_id=q.message.chat_id, photo=img_url,
+                caption=caption[:1024], parse_mode="Markdown", reply_markup=kb)
+            return
+        except Exception as _pe:
+            logger.debug(f"send_photo failed: {_pe}")
+            continue
+
+    # All photo attempts failed — send text with first item's data
+    data    = candidate_items[0].get("data", [{}])[0]
+    title   = data.get("title", "NASA")
+    desc    = strip_html(data.get("description", ""))[:400]
+    caption = f"*{title}*\n\n{desc + '…' if desc else ''}"
+    try:
         await ctx.bot.send_message(chat_id=q.message.chat_id, text=caption[:4096],
             parse_mode="Markdown", reply_markup=kb, disable_web_page_preview=True)
     except Exception as e:
-        await safe_edit(q, f"{tx(lang,'err')}: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
+        logger.error(f"send_nasa_image: final fallback failed: {e}")
 # ── End: NASA IMAGE SEARCH HELPER ─────────────────────────────────────────────
 
 
@@ -2054,8 +2112,8 @@ async def _send_apod(q, ctx, params=None):
         data    = nasa_req("/planetary/apod", params)
         title   = data.get("title", "")
         expl    = strip_html(data.get("explanation", ""))[:900]
-        url     = data.get("url", "")
-        hdurl   = data.get("hdurl", url)
+        url     = data.get("url", "").replace("http://","https://")
+        hdurl   = data.get("hdurl", url).replace("http://","https://")
         mtype   = data.get("media_type", "image")
         d       = data.get("date", "")
         copy_   = data.get("copyright", "NASA").strip().replace("\n", " ")
@@ -2466,24 +2524,34 @@ async def satellites_h(update, ctx):
         total, active = cached
     else:
         try:
-            # Use CelesTrak for fast, reliable counts instead of SpaceX massive v5 JSON
-            # CelesTrak groups endpoint gives active satellites quickly
+            # Primary: CelesTrak SATCAT for quick Starlink count (very fast, reliable)
             try:
                 r_ct = requests.get(
-                    "https://celestrak.org/SOCRATES/query.php?CODE=ALL&MIN=1&DAYS=7&LIMIT=1&FORMAT=JSON",
-                    timeout=8)
-            except Exception:
-                r_ct = None
-            # Primary: Use SpaceX API with limit to avoid full 600MB download
-            r_sl = requests.get(
-                "https://api.spacexdata.com/v5/starlink?limit=9999",
-                timeout=20, headers={"User-Agent": "NASASpaceBot/2.0"})
-            r_sl.raise_for_status()
-            sl_list = r_sl.json()
-            total  = len(sl_list) if isinstance(sl_list, list) else 6000
-            active = sum(1 for s in sl_list if isinstance(s, dict) and
-                         not (s.get("spaceTrack") or {}).get("DECAY_DATE")) if isinstance(sl_list, list) else 5800
-            cache_set("starlink", (total, active))
+                    "https://celestrak.org/pub/satcat.csv",
+                    timeout=10, headers={"User-Agent":"NASASpaceBot/2.0"},
+                    stream=True
+                )
+                if r_ct.status_code == 200:
+                    lines_ct = r_ct.text.split("\n")
+                    total  = sum(1 for l in lines_ct if "STARLINK" in l)
+                    active = sum(1 for l in lines_ct if "STARLINK" in l and "+R" not in l and "D" not in l.split(",")[2:3])
+                    if total > 100:
+                        cache_set("starlink", (total, active))
+                        raise StopIteration  # skip spacex
+            except StopIteration:
+                pass
+            except Exception as _ct_e:
+                logger.debug(f"CelesTrak: {_ct_e}")
+                # Fallback: SpaceX API (may be slow)
+                r_sl = requests.get(
+                    "https://api.spacexdata.com/v5/starlink?limit=9999",
+                    timeout=25, headers={"User-Agent": "NASASpaceBot/2.0"})
+                r_sl.raise_for_status()
+                sl_list = r_sl.json()
+                total  = len(sl_list) if isinstance(sl_list, list) else 6900
+                active = sum(1 for s in sl_list if isinstance(s, dict) and
+                             not (s.get("spaceTrack") or {}).get("DECAY_DATE")) if isinstance(sl_list, list) else 6200
+                cache_set("starlink", (total, active))
         except: total = active = "?"
     text = tx(lang, "satellites_text", total=total, active=active)
     sat_imgs = ["satellite orbit earth nasa", "starlink constellation night sky",
@@ -2794,15 +2862,8 @@ async def live_epic_h(update, ctx):
         if not data:
             await safe_edit(q,tx(lang,"no_img"),reply_markup=back_kb(lang,ctx=ctx)); return
         item=data[0]; date_raw=item.get("date","")[:10]; date_str=date_raw.replace("-","/"); img=item.get("image","")
-        # PNG archive (primary), fallback to thumbs
+        # Use thumbs endpoint — always available, no HEAD check needed
         url=f"https://epic.gsfc.nasa.gov/archive/natural/{date_str}/png/{img}.png"
-        # Verify PNG accessible, otherwise use JPEG
-        try:
-            _chk=requests.head(url,timeout=6); 
-            if _chk.status_code not in (200,301,302):
-                url=f"https://epic.gsfc.nasa.gov/archive/natural/{date_str}/jpg/{img}.jpg"
-        except Exception:
-            url=f"https://epic.gsfc.nasa.gov/archive/natural/{date_str}/jpg/{img}.jpg"
         caption=f"{tx(lang,'live_epic_title')}\n📅 {date_str}\n\n{tx(lang,'live_epic_desc')}"
         await del_msg(q)
         try:
@@ -2815,21 +2876,42 @@ async def live_epic_h(update, ctx):
         await safe_edit(q,tx(lang,"no_img"),reply_markup=back_kb(lang,ctx=ctx))
 
 async def live_sat_count_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"⏳...")
     total=active="?"
     try:
         cached_sl=cache_get("starlink")
         if cached_sl:
             total,active=cached_sl
         else:
-            r_sl=requests.get("https://api.spacexdata.com/v5/starlink?limit=9999",
-                timeout=20, headers={"User-Agent":"NASASpaceBot/2.0"})
-            r_sl.raise_for_status(); sl=r_sl.json()
-            if isinstance(sl,list):
-                total=len(sl); active=sum(1 for s in sl if isinstance(s,dict) and not (s.get("spaceTrack") or {}).get("DECAY_DATE"))
-                cache_set("starlink",(total,active))
-    except Exception as e:
-        logger.warning(f"Starlink API error: {e}")
+            # Fast: CelesTrak SATCAT CSV — parse Starlink lines only
+            try:
+                r_ct=requests.get("https://celestrak.org/pub/satcat.csv",
+                    timeout=12, headers={"User-Agent":"NASASpaceBot/2.0"}, stream=True)
+                if r_ct.status_code==200:
+                    lines_ct=r_ct.text.split("\n")
+                    sl_lines=[l for l in lines_ct if "STARLINK" in l]
+                    total_ct=len(sl_lines)
+                    # Decayed if status field has "D"
+                    active_ct=sum(1 for l in sl_lines
+                        if len(l.split(","))>2 and l.split(",")[2].strip() not in ("D","",))
+                    if total_ct > 100:
+                        total=total_ct; active=active_ct
+                        cache_set("starlink",(total,active))
+                        raise StopIteration
+            except StopIteration:
+                pass
+            if total=="?":
+                # Fallback: SpaceX API
+                r_sl=requests.get("https://api.spacexdata.com/v5/starlink?limit=9999",
+                    timeout=25, headers={"User-Agent":"NASASpaceBot/2.0"})
+                r_sl.raise_for_status(); sl=r_sl.json()
+                if isinstance(sl,list):
+                    total=len(sl)
+                    active=sum(1 for s in sl if isinstance(s,dict) and not (s.get("spaceTrack") or {}).get("DECAY_DATE"))
+                    cache_set("starlink",(total,active))
+    except (StopIteration, Exception) as e:
+        if not isinstance(e, StopIteration):
+            logger.warning(f"Starlink API error: {e}")
     await safe_edit(q,tx(lang,"live_starlink_title",total=total,active=active),
         reply_markup=back_kb(lang,"live_satellite_count",ctx))
 # ── End: LIVE HANDLERS ────────────────────────────────────────────────────────
@@ -3133,21 +3215,23 @@ async def _show_news_article(q, ctx, lang, source_key, idx):
     img_url = art.get("img","") or art.get("fallback_img","")
 
     await del_msg(q)
+    # Try article image first, then source fallback, then text-only
+    img_urls_to_try = []
     if img_url:
+        img_urls_to_try.append(img_url.replace("http://","https://"))
+    fallback_img = src.get("fallback_img","https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0193.jpg")
+    if fallback_img not in img_urls_to_try:
+        img_urls_to_try.append(fallback_img)
+    sent = False
+    for photo_url in img_urls_to_try:
         try:
             await ctx.bot.send_photo(
-                chat_id=q.message.chat_id, photo=img_url,
+                chat_id=q.message.chat_id, photo=photo_url,
                 caption=caption, parse_mode="Markdown", reply_markup=kb)
-            return
+            sent = True; break
         except Exception:
-            pass
-    # fallback: SDO solar image as header
-    try:
-        await ctx.bot.send_photo(
-            chat_id=q.message.chat_id,
-            photo=src.get("fallback_img","https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0193.jpg"),
-            caption=caption, parse_mode="Markdown", reply_markup=kb)
-    except Exception:
+            continue
+    if not sent:
         await ctx.bot.send_message(
             chat_id=q.message.chat_id, text=caption[:4096],
             parse_mode="Markdown", reply_markup=kb, disable_web_page_preview=True)
@@ -3464,15 +3548,33 @@ STATS_FILE        = "user_stats.json"
 SMART_ALERTS_FILE = "smart_alerts.json"
 COURSE_FILE       = "course_progress.json"
 
+import threading as _thr
+_file_lock = _thr.Lock()
+
 def _jload(f, d):
-    try:
-        with open(f) as fp: return json.load(fp)
-    except: return d
+    with _file_lock:
+        try:
+            with open(f, encoding="utf-8") as fp:
+                return json.load(fp)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return d
+        except Exception as e:
+            logger.warning(f"_jload {f}: {e}")
+            return d
 
 def _jsave(f, data):
-    try:
-        with open(f,"w") as fp: json.dump(data,fp,ensure_ascii=False,indent=2)
-    except Exception as e: logger.error(f"_jsave {f}: {e}")
+    """Atomic write: write to temp file, then rename — prevents corruption."""
+    import tempfile, os
+    with _file_lock:
+        try:
+            dir_ = os.path.dirname(os.path.abspath(f)) or "."
+            with tempfile.NamedTemporaryFile("w", dir=dir_, delete=False,
+                                             suffix=".tmp", encoding="utf-8") as tmp:
+                json.dump(data, tmp, ensure_ascii=False, indent=2)
+                tmp_path = tmp.name
+            os.replace(tmp_path, f)
+        except Exception as e:
+            logger.error(f"_jsave {f}: {e}")
 
 def load_favorites():     return _jload(FAVORITES_FILE, {})
 def save_favorites(d):    _jsave(FAVORITES_FILE, d)
@@ -3870,34 +3972,78 @@ async def job_earthquake_alert(context):
 # BLOCK: SPACEWEATHER DIGEST                                                     ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def spaceweather_digest_h(update, ctx):
-    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,tx(lang,"sw_digest_loading"))
-    sections=[]
-    # 1. Kp index
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    await safe_edit(q, tx(lang,"sw_digest_loading"))
+    sections = []
+
+    # 1. Kp index — NOAA 1-minute Kp JSON
     try:
-        r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=10); r.raise_for_status()
-        data=r.json(); kp=float(data[-1].get("kp_index",data[-1].get("Kp",0)))
-        kp_bar="🟢" if kp<4 else "🟡" if kp<6 else "🟠" if kp<8 else "🔴"
-        sections.append(f"{kp_bar} *Kp-index:* {kp:.1f}/9")
-    except: sections.append("⚪ Kp: N/A")
-    # 2. Solar wind speed
+        r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",
+                        timeout=12, headers={"User-Agent":"NASASpaceBot/2.0"})
+        r.raise_for_status()
+        rows = [x for x in r.json() if isinstance(x, dict)]
+        kp_val = None
+        for field in ("kp_index","Kp","kp","estimated_kp"):
+            try: kp_val = float(rows[-1][field]); break
+            except: pass
+        if kp_val is None: kp_val = 0.0
+        bar = "🟢" if kp_val<4 else "🟡" if kp_val<6 else "🟠" if kp_val<8 else "🔴"
+        sections.append(f"{bar} *Kp-index:* {kp_val:.1f}/9")
+    except Exception as _e:
+        logger.debug(f"Kp: {_e}"); sections.append("⚪ Kp: N/A")
+
+    # 2. Solar wind speed — column index 2 = bulk_speed
     try:
-        r=requests.get("https://services.swpc.noaa.gov/products/solar-wind/plasma-5-minute.json",timeout=10); r.raise_for_status()
-        data=r.json(); spd=float(data[-1][2])
-        sections.append(f"💨 *Solar wind:* {spd:,.0f} km/s")
-    except: sections.append("💨 Solar wind: N/A")
-    # 3. X-ray flux
+        r=requests.get("https://services.swpc.noaa.gov/products/solar-wind/plasma-5-minute.json",
+                        timeout=12, headers={"User-Agent":"NASASpaceBot/2.0"})
+        r.raise_for_status()
+        rows=[x for x in r.json() if isinstance(x,list) and len(x)>=3 and x[0] != "time_tag"]
+        spd = float(rows[-1][2]) if rows else 0
+        icon_w = "🌬" if spd < 400 else "💨" if spd < 600 else "🌪"
+        sections.append(f"{icon_w} *Solar wind:* {spd:,.0f} km/s")
+    except Exception as _e:
+        logger.debug(f"Solar wind: {_e}"); sections.append("💨 Solar wind: N/A")
+
+    # 3. X-ray flux — GOES primary
     try:
-        r=requests.get("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",timeout=10); r.raise_for_status()
-        flux=float(r.json()[-1].get("flux",0))
-        cls_="X" if flux>=1e-4 else "M" if flux>=1e-5 else "C" if flux>=1e-6 else "B" if flux>=1e-7 else "A"
-        sections.append(f"⚡ *Flares:* Class {cls_} ({flux:.1e} W/m²)")
-    except: sections.append("⚡ Flares: N/A")
-    # 4. Moon
-    emoji,_,_,illum=get_moon_phase(date.today())
-    sections.append(f"{emoji} *Moon:* {illum}% illuminated")
-    text=(f"{tx(lang,'sw_digest_title')}\n📅 {date.today().strftime('%d %b %Y')}\n\n"+"\n".join(sections)+
-          "\n\n[🔗 NOAA SWPC](https://www.swpc.noaa.gov)")
-    await safe_edit(q,text,reply_markup=back_kb(lang,"spaceweather_digest",ctx))
+        r=requests.get("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",
+                        timeout=12, headers={"User-Agent":"NASASpaceBot/2.0"})
+        r.raise_for_status()
+        entries = [x for x in r.json() if isinstance(x,dict)]
+        # use short-band (0.05-0.4nm) flux
+        entry = entries[-1] if entries else {}
+        flux_raw = entry.get("flux") or entry.get("satellite") or 0
+        try: flux = float(flux_raw)
+        except: flux = 0.0
+        cls_ = "X" if flux>=1e-4 else "M" if flux>=1e-5 else "C" if flux>=1e-6 else "B" if flux>=1e-7 else "A"
+        sections.append(f"⚡ *X-ray flux:* Class {cls_} ({flux:.2e} W/m²)")
+    except Exception as _e:
+        logger.debug(f"X-ray: {_e}"); sections.append("⚡ X-ray: N/A")
+
+    # 4. Geomagnetic storm status
+    try:
+        r=requests.get("https://services.swpc.noaa.gov/products/noaa-alerts.json",
+                        timeout=10, headers={"User-Agent":"NASASpaceBot/2.0"})
+        if r.ok:
+            alerts_text = r.text[:500]
+            if "G1" in alerts_text or "G2" in alerts_text or "G3" in alerts_text:
+                sections.append("⚠️ *Geomagnetic storm* in progress")
+            else:
+                sections.append("✅ No active geomagnetic storm")
+    except Exception:
+        pass
+
+    # 5. Moon phase
+    try:
+        emoji,_,_,illum = get_moon_phase(date.today())
+        sections.append(f"{emoji} *Moon:* {illum}% illuminated")
+    except Exception:
+        pass
+
+    text = (f"{tx(lang,'sw_digest_title')}\n📅 {date.today().strftime('%d %b %Y')}\n\n" +
+            "\n".join(sections) +
+            "\n\n[🔗 NOAA Space Weather Center](https://www.swpc.noaa.gov)")
+    await safe_edit(q, text, reply_markup=back_kb(lang,"spaceweather_digest",ctx))
 
 async def job_spaceweather_digest(context):
     subs=load_subscribers(); chat_ids=subs.get("spaceweather_digest",[])
@@ -4020,21 +4166,24 @@ async def daily_horoscope_h(update, ctx):
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 def nasa_image_search(query: str, count: int = 1) -> str:
-    """Synchronous helper: search NASA Image API and return first image URL, or empty string."""
+    """Synchronous helper: search NASA Image API and return first image URL, or empty string.
+    Call from async context via: loop.run_in_executor(None, nasa_image_search, query)
+    """
     try:
-        import requests as _req
-        r = _req.get("https://images-api.nasa.gov/search",
+        r = requests.get(
+            "https://images-api.nasa.gov/search",
             params={"q": query, "media_type": "image", "page_size": 20},
-            timeout=10)
+            timeout=10,
+            headers={"User-Agent": "NASASpaceBot/2.0"}
+        )
         r.raise_for_status()
         items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
-            import random as _rand
-            item = _rand.choice(items[:15])
-            return (item.get("links", [{}])[0]).get("href", "")
+            item = random.choice(items[:15])
+            href = (item.get("links", [{}])[0]).get("href", "")
+            return href.replace("http://", "https://")
     except Exception as e:
-        import logging as _log
-        _log.getLogger(__name__).warning(f"nasa_image_search({query!r}): {e}")
+        logger.warning(f"nasa_image_search({query!r}): {e}")
     return ""
 # ── End: nasa_image_search ────────────────────────────────────────────────────
 
@@ -4046,7 +4195,9 @@ async def daily_challenge_start(update, ctx):
     await safe_edit(q,tx(lang,"challenge_loading"))
     await del_msg(q)
     caption_c=f"{tx(lang,'challenge_title')}\n\n{tx(lang,'challenge_question')}"
-    img=nasa_image_search(chall["img_q"],1)
+    import asyncio as _aio
+    loop=_aio.get_event_loop()
+    img=await loop.run_in_executor(None, nasa_image_search, chall["img_q"])
     if img:
         try:
             await ctx.bot.send_photo(chat_id=q.message.chat_id,photo=img,caption=caption_c,
@@ -4186,31 +4337,156 @@ async def qa_cancel(update, ctx):
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 async def favorites_save_h(update, ctx):
     """Called when user taps ⭐ Save on APOD. Data passed via ctx.user_data."""
-    q=update.callback_query; lang=get_lang(ctx); await safe_answer(q,tx(lang,"fav_saved"),show_alert=False)
+    q=update.callback_query; lang=get_lang(ctx)
     apod_data=ctx.user_data.get("last_apod",{})
-    if not apod_data: return
+    if not apod_data:
+        await safe_answer(q, tx(lang,"fav_empty"), show_alert=True); return
     cid=str(q.message.chat_id); favs=load_favorites()
     if cid not in favs: favs[cid]=[]
     if len(favs[cid])>=50:
-        await safe_answer(q,tx(lang,"fav_max"),show_alert=True); return
-    entry={"date":apod_data.get("date",date.today().isoformat()),"title":apod_data.get("title","APOD"),"url":apod_data.get("url",""),"hdurl":apod_data.get("hdurl","")}
-    if not any(f["date"]==entry["date"] for f in favs[cid]):
-        favs[cid].insert(0,entry); save_favorites(favs)
-        update_stats(q.message.chat_id,"favorites",1)
+        await safe_answer(q, tx(lang,"fav_max"), show_alert=True); return
+    entry={
+        "type":   "apod",
+        "date":   apod_data.get("date", date.today().isoformat()),
+        "title":  apod_data.get("title", "APOD"),
+        "url":    apod_data.get("url",""),
+        "hdurl":  apod_data.get("hdurl",""),
+    }
+    if any(f.get("date")==entry["date"] and f.get("type","apod")=="apod" for f in favs[cid]):
+        await safe_answer(q, tx(lang,"fav_already"), show_alert=True); return
+    favs[cid].insert(0, entry); save_favorites(favs)
+    update_stats(q.message.chat_id,"favorites",1)
+    await safe_answer(q, tx(lang,"fav_saved"), show_alert=True)
 
-async def favorites_view_h(update, ctx):
+FAV_PAGE_SIZE = 5  # items per page
+
+def favorites_list_kb(lang, items, page, total):
+    """Build inline keyboard: numbered items + view/del per row + prev/next paging."""
+    rows = []
+    start = page * FAV_PAGE_SIZE
+    page_items = items[start:start + FAV_PAGE_SIZE]
+    for i, item in enumerate(page_items):
+        abs_idx = start + i
+        ftype   = item.get("type","apod")
+        icon    = tx(lang,"fav_type_apod") if ftype=="apod" else tx(lang,"fav_type_news")
+        title_s = item.get("title","?")[:28]
+        # row label
+        rows.append([
+            InlineKeyboardButton(f"{abs_idx+1}. {icon} {title_s}", callback_data="noop"),
+        ])
+        rows.append([
+            InlineKeyboardButton(tx(lang,"fav_view_btn"), callback_data=f"fav_open_{abs_idx}"),
+            InlineKeyboardButton(tx(lang,"fav_del_one"),  callback_data=f"fav_del_{abs_idx}"),
+        ])
+    # Pagination row
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton(tx(lang,"fav_page_prev"), callback_data=f"fav_page_{page-1}"))
+    total_pages = (total + FAV_PAGE_SIZE - 1) // FAV_PAGE_SIZE
+    nav.append(InlineKeyboardButton(f"{page+1}/{total_pages}", callback_data="noop"))
+    if (page+1) * FAV_PAGE_SIZE < total:
+        nav.append(InlineKeyboardButton(tx(lang,"fav_page_next"), callback_data=f"fav_page_{page+1}"))
+    if nav:
+        rows.append(nav)
+    rows.append([
+        InlineKeyboardButton(tx(lang,"fav_clear"),   callback_data="favorites_clear"),
+        InlineKeyboardButton(tx(lang,"back_menu"),   callback_data="back"),
+    ])
+    return InlineKeyboardMarkup(rows)
+
+def favorites_list_text(lang, items, page, total):
+    start = page * FAV_PAGE_SIZE
+    page_items = items[start:start + FAV_PAGE_SIZE]
+    lines = [tx(lang,"fav_your"), tx(lang,"fav_hint"), ""]
+    for i, item in enumerate(page_items):
+        abs_idx = start + i
+        ftype   = item.get("type","apod")
+        icon    = tx(lang,"fav_type_apod") if ftype=="apod" else tx(lang,"fav_type_news")
+        title_s = item.get("title","?")[:40]
+        date_s  = item.get("date","")[:10]
+        lines.append(f"*{abs_idx+1}.* {icon} {title_s}")
+        if date_s:
+            lines.append(f"    📅 {date_s}")
+    lines.append("")
+    lines.append(tx(lang,"fav_total",n=total))
+    return "\n".join(lines)
+
+async def favorites_view_h(update, ctx, page=0):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
     cid=str(q.message.chat_id); favs=load_favorites(); my_favs=favs.get(cid,[])
     if not my_favs:
-        await safe_edit(q,f"{tx(lang,'fav_title')}\n\n{tx(lang,'fav_empty')}",
+        await safe_edit(q,
+            f"{tx(lang,'fav_title')}\n\n{tx(lang,'fav_empty')}",
             reply_markup=back_kb(lang,ctx=ctx)); return
-    lines=[tx(lang,"fav_your")+"\n"]
-    for i,f in enumerate(my_favs[:15]):
-        link=f"[{f['title'][:35]}]({f.get('hdurl') or f.get('url','')})"
-        lines.append(f"{i+1}. {link} _{f['date']}_")
-    lines.append("\n"+tx(lang,"fav_total",n=len(my_favs)))
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"fav_clear"),callback_data="favorites_clear"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
-    await safe_edit(q,"\n".join(lines)[:4096],reply_markup=kb)
+    text = favorites_list_text(lang, my_favs, page, len(my_favs))
+    kb   = favorites_list_kb(lang, my_favs, page, len(my_favs))
+    await safe_edit(q, text[:4096], reply_markup=kb)
+
+async def favorites_page_h(update, ctx):
+    """Handle fav_page_N callbacks."""
+    q=update.callback_query; await safe_answer(q)
+    page = int(q.data.split("_")[-1])
+    await favorites_view_h(update, ctx, page=page)
+
+async def favorites_open_h(update, ctx):
+    """Open / send a saved favorite (fav_open_N)."""
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    idx   = int(q.data.split("_")[-1])
+    cid   = str(q.message.chat_id)
+    favs  = load_favorites()
+    items = favs.get(cid, [])
+    if idx >= len(items):
+        await safe_answer(q, "❌ Not found", show_alert=True); return
+    item  = items[idx]
+    ftype = item.get("type","apod")
+    url   = item.get("hdurl") or item.get("url","")
+    title = item.get("title","?")
+    d_str = item.get("date","")[:10]
+    if not url:
+        await safe_answer(q, tx(lang,"fav_no_url"), show_alert=True); return
+    icon = tx(lang,"fav_type_apod") if ftype=="apod" else tx(lang,"fav_type_news")
+    caption = f"{icon} *{title}*"
+    if d_str: caption += f"\n📅 {d_str}"
+    caption += f"\n\n[🔗 {url[:60]}...]({url})"
+    back_btn = InlineKeyboardMarkup([[
+        InlineKeyboardButton(f"🗑 {tx(lang,'fav_del_one')}", callback_data=f"fav_del_{idx}"),
+        InlineKeyboardButton(tx(lang,"back_menu"), callback_data="favorites_view"),
+    ]])
+    try:
+        await ctx.bot.send_photo(
+            chat_id=q.message.chat_id,
+            photo=url,
+            caption=caption[:1024],
+            parse_mode="Markdown",
+            reply_markup=back_btn,
+        )
+    except Exception:
+        # Photo failed — send as message with link
+        await ctx.bot.send_message(
+            chat_id=q.message.chat_id,
+            text=caption[:4096],
+            parse_mode="Markdown",
+            reply_markup=back_btn,
+            disable_web_page_preview=False,
+        )
+
+async def favorites_del_one_h(update, ctx):
+    """Delete single favorite item (fav_del_N)."""
+    q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
+    idx  = int(q.data.split("_")[-1])
+    cid  = str(q.message.chat_id)
+    favs = load_favorites()
+    items = favs.get(cid, [])
+    if 0 <= idx < len(items):
+        items.pop(idx)
+        favs[cid] = items
+        save_favorites(favs)
+    # After delete — show updated list at page 0
+    if items:
+        await favorites_view_h(update, ctx, page=0)
+    else:
+        await safe_edit(q, f"{tx(lang,'fav_del_confirm')}\n\n{tx(lang,'fav_empty')}",
+                        reply_markup=back_kb(lang, ctx=ctx))
 
 async def favorites_clear_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -4223,16 +4499,23 @@ async def news_fav_h(update, ctx):
     q=update.callback_query; lang=get_lang(ctx)
     art=ctx.user_data.get("last_news_article",{})
     if not art:
-        await safe_answer(q,tx(lang,"fav_empty"),show_alert=True); return
+        await safe_answer(q, tx(lang,"fav_empty"), show_alert=True); return
     cid=str(q.message.chat_id); favs=load_favorites()
     if cid not in favs: favs[cid]=[]
     if len(favs[cid])>=50:
-        await safe_answer(q,tx(lang,"fav_max"),show_alert=True); return
-    entry={"date":art.get("date",""),"title":art.get("title","Article"),"url":art.get("url",""),"hdurl":art.get("url","")}
-    if not any(f.get("url")==entry["url"] for f in favs[cid]):
-        favs[cid].insert(0,entry); save_favorites(favs)
-        update_stats(q.message.chat_id,"favorites",1)
-    await safe_answer(q,tx(lang,"fav_saved"),show_alert=False)
+        await safe_answer(q, tx(lang,"fav_max"), show_alert=True); return
+    entry={
+        "type":  "news",
+        "date":  art.get("date",""),
+        "title": art.get("title","Article"),
+        "url":   art.get("url",""),
+        "hdurl": art.get("url",""),
+    }
+    if any(f.get("url")==entry["url"] for f in favs[cid]):
+        await safe_answer(q, tx(lang,"fav_already"), show_alert=True); return
+    favs[cid].insert(0, entry); save_favorites(favs)
+    update_stats(q.message.chat_id,"favorites",1)
+    await safe_answer(q, tx(lang,"fav_saved"), show_alert=True)
 # ── End: FAVORITES HANDLERS ───────────────────────────────────────────────────
 
 
@@ -4431,40 +4714,26 @@ async def iss_city_received(update, ctx):
     city_name,lat,lon=match
     # Get ISS passes via Heavens Above (open-notify is deprecated/dead)
     passes=[]
-    # Try Open Notify pass times (free, no key required)
+    # Try Heavens-Above style via wheretheiss.at TLE prediction helper
+    # Primary: n2yo free API (no key for basic passes endpoint)
     try:
-        r_on = requests.get(
-            f"https://api.open-notify.org/iss-pass.json?lat={lat}&lon={lon}&n=5",
-            timeout=10, headers={"User-Agent":"NASASpaceBot/2.0"}
+        n2yo_key = os.environ.get("N2YO_API_KEY", "")
+        n2yo_url = (
+            f"https://api.n2yo.com/rest/v1/satellite/visualpasses/25544/{lat}/{lon}/0/5/300/"
+            f"&apiKey={n2yo_key}" if n2yo_key else
+            f"https://api.n2yo.com/rest/v1/satellite/visualpasses/25544/{lat}/{lon}/0/5/300/"
         )
-        if r_on.status_code == 200:
-            on_data = r_on.json()
-            for p in (on_data.get("response") or [])[:5]:
-                rise_ts = p.get("risetime", 0)
-                dur = p.get("duration", 0)
+        r_n2 = requests.get(n2yo_url, timeout=10, headers={"User-Agent":"NASASpaceBot/2.0"})
+        if r_n2.status_code == 200:
+            n2_data = r_n2.json()
+            for p in (n2_data.get("passes") or [])[:5]:
+                rise_ts = p.get("startUTC", 0); dur = p.get("duration", 0)
                 rise_dt = datetime.utcfromtimestamp(rise_ts).strftime("%d.%m %H:%M")
                 dur_min = f"{dur//60}m{dur%60:02d}s"
-                passes.append(f"🛸 *{rise_dt} UTC*  |  ⏱ {dur_min}")
-    except Exception as _e:
-        logger.warning(f"open-notify iss-pass: {_e}")
-    # If Open Notify failed, try n2yo with API key (if configured)
-    if not passes:
-        try:
-            n2yo_key = os.environ.get("N2YO_API_KEY", "")
-            if n2yo_key:
-                r_n2 = requests.get(
-                    f"https://api.n2yo.com/rest/v1/satellite/visualpasses/25544/{lat}/{lon}/0/5/300/&apiKey={n2yo_key}",
-                    timeout=10, headers={"User-Agent":"NASASpaceBot/2.0"}
-                )
-                if r_n2.status_code == 200:
-                    data = r_n2.json()
-                    for p in (data.get("passes") or [])[:5]:
-                        rise_ts = p.get("startUTC", 0); dur = p.get("duration", 0)
-                        rise_dt = datetime.utcfromtimestamp(rise_ts).strftime("%d.%m %H:%M")
-                        dur_min = f"{dur//60}m{dur%60:02d}s"
-                        passes.append(f"🛸 *{rise_dt} UTC*  |  ⏱ {dur_min}")
-        except Exception as _e2:
-            logger.warning(f"n2yo api: {_e2}")
+                mag     = p.get("mag","?")
+                passes.append(f"🛸 *{rise_dt} UTC*  |  ⏱ {dur_min}  |  ✨ mag {mag}")
+    except Exception as _e2:
+        logger.warning(f"n2yo passes: {_e2}")
     if not passes:
         # Fallback: calculate from current position
         try:
@@ -4737,6 +5006,9 @@ async def route_new_callbacks(update, cb, ctx, lang):
     if cb.startswith("dict_"):          await dict_term_h(update,ctx); return True
     if cb.startswith("challenge_ans_"): await challenge_answer_h(update,ctx); return True
     if cb=="favorites_save":            await favorites_save_h(update,ctx); return True
+    if cb.startswith("fav_open_"):      await favorites_open_h(update,ctx); return True
+    if cb.startswith("fav_del_"):       await favorites_del_one_h(update,ctx); return True
+    if cb.startswith("fav_page_"):      await favorites_page_h(update,ctx); return True
     if cb=="smart_set_kp":              await smart_set_kp_start(update,ctx); return True
     if cb=="smart_set_ld":              await smart_set_ld_start(update,ctx); return True
     if cb=="smart_set_eq":              await smart_set_eq_start(update,ctx); return True
