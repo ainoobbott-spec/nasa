@@ -142,6 +142,7 @@ NEWS_SOURCES = {
     },
     "news_spacedotcom": {
         "url": "https://www.space.com/feeds/all",
+        "url_fallback": "https://www.space.com/rss/",
         "name": "Space.com",
         "emoji": "🌌",
         "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIB.jpg",
@@ -163,6 +164,7 @@ NEWS_SOURCES = {
     },
     "news_universetoday": {
         "url": "https://www.universetoday.com/feed/",
+        "url_fallback": "https://universetoday.com/feed/",
         "name": "Universe Today",
         "emoji": "🪐",
         "fallback_img": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0171.jpg",
@@ -580,7 +582,7 @@ T = {
     "rocket_play_again":"🔄 Играть снова",
     "qa_chars_error":"❌ 3–500 символов","qa_thinking":"🤔 Думаю...","qa_cancelled":"❌ Отменено",
     "qa_ask_another":"❓ Ещё вопрос","qa_api_error":"❌ API Клод не настроен.",
-    "fav_saved":"⭐ Сохранено!","fav_save_btn":"⭐ Сохранить","fav_max":"❌ Максимум 50 избранных",
+    "fav_saved":"⭐ Сохранено!","fav_save_btn":"⭐ Сохранить","fav_save_news":"⭐ В избранное","fav_max":"❌ Максимум 50 избранных",
     "fav_title":"⭐ *Избранное*","fav_empty":"Сохранённых фото пока нет.\nНажми ⭐ на любом APOD, чтобы сохранить!",
     "fav_your":"⭐ *Твоё избранное*","fav_total":"_Всего: {n} фото_",
     "fav_clear":"🗑 Удалить всё","fav_cleared":"🗑 Избранное очищено.",
@@ -826,7 +828,7 @@ T = {
     "rocket_play_again":"🔄 Play again",
     "qa_chars_error":"❌ 3–500 chars","qa_thinking":"🤔 Thinking...","qa_cancelled":"❌ Cancelled",
     "qa_ask_another":"❓ Ask another","qa_api_error":"❌ Claude API key not configured.",
-    "fav_saved":"⭐ Saved!","fav_save_btn":"⭐ Save","fav_max":"❌ Max 50 favorites",
+    "fav_saved":"⭐ Saved!","fav_save_btn":"⭐ Save","fav_save_news":"⭐ Save article","fav_max":"❌ Max 50 favorites",
     "fav_title":"⭐ *Favorites*","fav_empty":"No saved photos yet.\nTap ⭐ on any APOD to save it!",
     "fav_your":"⭐ *Your Favorites*","fav_total":"_Total: {n} photos_",
     "fav_clear":"🗑 Clear all","fav_cleared":"🗑 Favorites cleared.",
@@ -1057,7 +1059,7 @@ T = {
     "rocket_play_again":"🔄 שחק שוב",
     "qa_chars_error":"❌ 3–500 תווים","qa_thinking":"🤔 חושב...","qa_cancelled":"❌ בוטל",
     "qa_ask_another":"❓ שאל עוד","qa_api_error":"❌ מפתח API לא מוגדר.",
-    "fav_saved":"⭐ נשמר!","fav_save_btn":"⭐ שמור","fav_max":"❌ מקסימום 50 מועדפים",
+    "fav_saved":"⭐ נשמר!","fav_save_btn":"⭐ שמור","fav_save_news":"⭐ שמור כתבה","fav_max":"❌ מקסימום 50 מועדפים",
     "fav_title":"⭐ *מועדפים*","fav_empty":"אין תמונות שמורות עדיין.\nלחץ ⭐ על כל APOD כדי לשמור!",
     "fav_your":"⭐ *המועדפים שלך*","fav_total":"_סה\"כ: {n} תמונות_",
     "fav_clear":"🗑 מחק הכל","fav_cleared":"🗑 המועדפים נמחקו.",
@@ -1288,7 +1290,7 @@ T = {
     "rocket_play_again":"🔄 العب مرة أخرى",
     "qa_chars_error":"❌ 3–500 حرف","qa_thinking":"🤔 أفكر...","qa_cancelled":"❌ تم الإلغاء",
     "qa_ask_another":"❓ اسأل مجدداً","qa_api_error":"❌ مفتاح API غير مُعدّ.",
-    "fav_saved":"⭐ تم الحفظ!","fav_save_btn":"⭐ حفظ","fav_max":"❌ الحد الأقصى 50 مفضلة",
+    "fav_saved":"⭐ تم الحفظ!","fav_save_btn":"⭐ حفظ","fav_save_news":"⭐ حفظ المقالة","fav_max":"❌ الحد الأقصى 50 مفضلة",
     "fav_title":"⭐ *المفضلة*","fav_empty":"لا توجد صور محفوظة بعد.\nاضغط ⭐ على أي APOD لحفظها!",
     "fav_your":"⭐ *مفضلاتك*","fav_total":"_الإجمالي: {n} صورة_",
     "fav_clear":"🗑 مسح الكل","fav_cleared":"🗑 تم مسح المفضلة.",
@@ -1385,11 +1387,13 @@ def strip_html(t): return re.sub(r'<[^>]+>', '', t or '')
 def nasa_req(path, params=None):
     p = {"api_key": NASA_API_KEY}
     if params: p.update(params)
-    r = requests.get(f"{NASA_BASE}{path}", params=p, timeout=15)
+    r = requests.get(f"{NASA_BASE}{path}", params=p, timeout=15,
+                     headers={"User-Agent":"NASASpaceBot/2.0"})
     r.raise_for_status(); return r.json()
 
 def get_json(url, params=None, timeout=12):
-    r = requests.get(url, params=params, timeout=timeout)
+    r = requests.get(url, params=params, timeout=timeout,
+                     headers={"User-Agent":"NASASpaceBot/2.0"})
     r.raise_for_status(); return r.json()
 # ── End: NASA API & HTTP HELPERS ──────────────────────────────────────────────
 
@@ -1699,11 +1703,15 @@ def news_article_kb(lang, source_key, idx, total, article_link):
             f"{tx(lang,'btn_news_next')} ({next_idx+1}/{total})",
             callback_data=f"news_page_{source_key}_{next_idx}"
         )])
+    # ⭐ Save to favorites
+    rows.append([InlineKeyboardButton(tx(lang, "fav_save_news"), callback_data=f"news_fav_{source_key}_{idx}")])
     src_row = []
     if article_link:
         src_row.append(InlineKeyboardButton(tx(lang, "btn_news_source"), url=article_link))
-    src_row.append(InlineKeyboardButton(tx(lang, "back_menu"), callback_data="back"))
+    # back_cat goes to news category, back_menu goes to main menu
+    src_row.append(InlineKeyboardButton(tx(lang, "back_cat"), callback_data="cat_news"))
     rows.append(src_row)
+    rows.append([InlineKeyboardButton(tx(lang, "back_menu"), callback_data="back")])
     return InlineKeyboardMarkup(rows)
 
 def notifications_kb(lang, subs, chat_id):
@@ -2418,7 +2426,7 @@ async def satellites_h(update, ctx):
         total, active = cached
     else:
         try:
-            sl     = get_json("https://api.spacexdata.com/v4/starlink", timeout=12)
+            sl     = get_json("https://api.spacexdata.com/v5/starlink", timeout=12)
             total  = len(sl)
             active = sum(1 for s in sl if isinstance(s, dict) and
                          not (s.get("spaceTrack") or {}).get("DECAY_DATE"))
@@ -2716,7 +2724,11 @@ async def live_sunspot_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
     try:
         r=requests.get("https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json",timeout=12); r.raise_for_status()
-        data=r.json(); latest=data[-1] if data else {}; ssn=latest.get("smoothed_ssn",latest.get("ssn","?"))
+        data=r.json(); latest=data[-1] if data else {}
+        # NOAA key changed: try multiple field names
+        ssn=latest.get("smoothed_ssn") or latest.get("ssn") or latest.get("SSN") or latest.get("SMOOTHED_SSN") or "?"
+        try: ssn=round(float(ssn),1)
+        except: pass
         await safe_edit(q,f"{tx(lang,'live_sunspot_title')}\n\n{tx(lang,'live_sunspot_text',ssn=ssn)}",
             reply_markup=back_kb(lang,"live_sunspot",ctx))
     except Exception as e:
@@ -2743,10 +2755,13 @@ async def live_epic_h(update, ctx):
 
 async def live_sat_count_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
+    total=active="?"
     try:
-        sl=get_json("https://api.spacexdata.com/v4/starlink",timeout=10)
-        total=len(sl); active=sum(1 for s in sl if isinstance(s,dict) and not (s.get("spaceTrack") or {}).get("DECAY_DATE"))
-    except: total=active="?"
+        sl=get_json("https://api.spacexdata.com/v5/starlink",timeout=12)
+        if isinstance(sl,list):
+            total=len(sl); active=sum(1 for s in sl if isinstance(s,dict) and not (s.get("spaceTrack") or {}).get("DECAY_DATE"))
+    except Exception as e:
+        logger.warning(f"Starlink API error: {e}")
     await safe_edit(q,tx(lang,"live_starlink_title",total=total,active=active),
         reply_markup=back_kb(lang,"live_satellite_count",ctx))
 # ── End: LIVE HANDLERS ────────────────────────────────────────────────────────
@@ -3044,6 +3059,8 @@ async def _show_news_article(q, ctx, lang, source_key, idx):
                f"{desc}")
     caption = caption[:1020]
 
+    # Store for favorites
+    ctx.user_data["last_news_article"] = {"title": title, "url": link, "hdurl": link, "date": pub[:10] if pub else ""}
     kb = news_article_kb(lang, source_key, idx, total, link)
     img_url = art.get("img","") or art.get("fallback_img","")
 
@@ -4109,6 +4126,22 @@ async def favorites_clear_h(update, ctx):
     cid=str(q.message.chat_id); favs=load_favorites()
     favs[cid]=[]; save_favorites(favs)
     await safe_edit(q,tx(lang,"fav_cleared"),reply_markup=back_kb(lang,ctx=ctx))
+
+async def news_fav_h(update, ctx):
+    """Save current news article to favorites (callback: news_fav_{source}_{idx})."""
+    q=update.callback_query; lang=get_lang(ctx)
+    art=ctx.user_data.get("last_news_article",{})
+    if not art:
+        await safe_answer(q,tx(lang,"fav_empty"),show_alert=True); return
+    cid=str(q.message.chat_id); favs=load_favorites()
+    if cid not in favs: favs[cid]=[]
+    if len(favs[cid])>=50:
+        await safe_answer(q,tx(lang,"fav_max"),show_alert=True); return
+    entry={"date":art.get("date",""),"title":art.get("title","Article"),"url":art.get("url",""),"hdurl":art.get("url","")}
+    if not any(f.get("url")==entry["url"] for f in favs[cid]):
+        favs[cid].insert(0,entry); save_favorites(favs)
+        update_stats(q.message.chat_id,"favorites",1)
+    await safe_answer(q,tx(lang,"fav_saved"),show_alert=False)
 # ── End: FAVORITES HANDLERS ───────────────────────────────────────────────────
 
 
@@ -4305,16 +4338,21 @@ async def iss_city_received(update, ctx):
         await update.message.reply_text(tx(lang,"iss_sched_not_found"))
         return ISS_CITY
     city_name,lat,lon=match
-    # Get ISS passes from Open Notify
+    # Get ISS passes via Heavens Above (open-notify is deprecated/dead)
     passes=[]
     try:
-        r=requests.get(f"http://api.open-notify.org/iss-pass.json?lat={lat}&lon={lon}&n=5",timeout=10)
+        # Try n2yo free API (CORS-safe, no key needed for basic queries)
+        r=requests.get(
+            f"https://api.n2yo.com/rest/v1/satellite/visualpasses/25544/{lat}/{lon}/0/10/300/",
+            timeout=10, headers={"User-Agent":"NASASpaceBot/2.0"}
+        )
         if r.status_code==200:
-            for p in r.json().get("response",[]):
-                rise_ts=p.get("risetime",0); dur=p.get("duration",0)
-                rise_dt=datetime.fromtimestamp(rise_ts).strftime("%d.%m %H:%M")
-                dur_min=f"{dur//60}m{dur%60:02d}s"
-                passes.append(f"🛸 *{rise_dt}*  |  Duration: {dur_min}")
+            data=r.json()
+            for p in (data.get("passes") or [])[:5]:
+                rise_ts=p.get("startUTC",0); dur=p.get("duration",0)
+                rise_dt=datetime.utcfromtimestamp(rise_ts).strftime("%d.%m %H:%M")
+                mag=p.get("mag","?"); dur_min=f"{dur//60}m{dur%60:02d}s"
+                passes.append(f"🛸 *{rise_dt} UTC*  |  ⏱ {dur_min}  |  ✨ mag {mag}")
     except: pass
     if not passes:
         # Fallback: calculate from current position
@@ -4415,7 +4453,10 @@ async def flight_calc_h(update, ctx):
           f"{tx(lang,'flight_speed_label',name=speed['name'],kmh=f'{kmh:,.0f}')}\n\n"
           f"{tx(lang,'flight_time',t=time_str)}\n\n"
           f"{chr(10).join(context_lines)}")
-    kb=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang,"flight_another"),callback_data="flight_calculator"),InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]])
+    kb=InlineKeyboardMarkup([
+        [InlineKeyboardButton(tx(lang,"flight_another"),callback_data="flight_calculator")],
+        [InlineKeyboardButton(tx(lang,"back_menu"),callback_data="back")]
+    ])
     await safe_edit(q,text.strip(),reply_markup=kb)
 # ── End: FLIGHT CALCULATOR ────────────────────────────────────────────────────
 
@@ -4588,9 +4629,10 @@ async def route_new_callbacks(update, cb, ctx, lang):
     if cb=="smart_set_kp":              await smart_set_kp_start(update,ctx); return True
     if cb=="smart_set_ld":              await smart_set_ld_start(update,ctx); return True
     if cb=="smart_set_eq":              await smart_set_eq_start(update,ctx); return True
+    if cb.startswith("news_fav_"):         await news_fav_h(update,ctx); return True
     if cb=="cat_profile":
-        await safe_answer(q); ctx.user_data["last_cat"]="cat_profile"
-        await safe_edit(q,tx(lang,"title_profile")+"\n\n"+tx(lang,"choose_sec"),reply_markup=profile_kb(lang)); return True
+        q2=update.callback_query; await safe_answer(q2); ctx.user_data["last_cat"]="cat_profile"
+        await safe_edit(q2,tx(lang,"title_profile")+"\n\n"+tx(lang,"choose_sec"),reply_markup=profile_kb(lang)); return True
     return False
 # ── End: CALLBACK ROUTER ADDITIONS ───────────────────────────────────────────
 
