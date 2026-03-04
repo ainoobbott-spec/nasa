@@ -37,6 +37,7 @@ QA_QUESTION   = 32
 ROCKET_STEP   = 33
 SMART_KP      = 34
 SMART_LD      = 35
+SMART_EQ      = 38
 CHALLENGE_ANS = 36
 COURSE_ENROLL = 37
 # ── End: CONVERSATION HANDLER STATES ──────────────────────────────────────────
@@ -1385,6 +1386,10 @@ def tx(lang, key, **kw):
     val = T.get(lang, T["en"]).get(key) or T["en"].get(key) or key
     return val.format(**kw) if kw else val
 
+def safe_err(e):
+    """Return exception message safe for Markdown (strip special chars)."""
+    return str(e).replace("`", "'").replace("*", "").replace("_", "").replace("[", "").replace("]", "")[:200]
+
 def get_lang(ctx): return ctx.user_data.get("lang", "ru")
 def strip_html(t): return re.sub(r'<[^>]+>', '', t or '')
 # ── End: TRANSLATION & UTILITY HELPERS ────────────────────────────────────────
@@ -1413,10 +1418,28 @@ def nasa_req(path, params=None, _retry=2):
             raise
     raise RuntimeError(f"nasa_req {path}: failed after {_retry+1} attempts")
 
+async def anasa_req(path, params=None):
+    """Non-blocking async wrapper for nasa_req."""
+    return await asyncio.to_thread(nasa_req, path, params)
+
 def get_json(url, params=None, timeout=12):
     r = requests.get(url, params=params, timeout=timeout,
                      headers={"User-Agent":"NASASpaceBot/2.0"})
     r.raise_for_status(); return r.json()
+
+async def aget(url, **kwargs):
+    """Non-blocking async wrapper for requests.get — prevents event loop stalls."""
+    return await asyncio.to_thread(requests.get, url, **kwargs)
+
+async def aget_json(url, params=None, timeout=12):
+    """Non-blocking async JSON fetch."""
+    r = await aget(url, params=params, timeout=timeout,
+                   headers={"User-Agent":"NASASpaceBot/2.0"})
+    r.raise_for_status(); return r.json()
+
+async def async_fetch_rss(source_key, max_items=30):
+    """Non-blocking async RSS fetch."""
+    return await asyncio.to_thread(fetch_rss, source_key, max_items)
 # ── End: NASA API & HTTP HELPERS ──────────────────────────────────────────────
 
 
@@ -1496,15 +1519,23 @@ async def safe_answer(q):
     except: pass
 
 async def safe_edit(q, text, reply_markup=None):
+    # Truncate to Telegram's 4096 char limit
+    text = text[:4096] if text else ""
     try:
         await q.edit_message_text(text, parse_mode="Markdown",
                                    reply_markup=reply_markup, disable_web_page_preview=True)
-    except:
-        try: await q.message.delete()
-        except: pass
-        try: await q.message.chat.send_message(text, parse_mode="Markdown",
-                                                reply_markup=reply_markup, disable_web_page_preview=True)
-        except: pass
+    except Exception:
+        # Retry without Markdown (handles special chars in API data)
+        try:
+            await q.edit_message_text(text, reply_markup=reply_markup,
+                                       disable_web_page_preview=True)
+        except Exception:
+            try: await q.message.delete()
+            except: pass
+            try:
+                await q.message.chat.send_message(text, reply_markup=reply_markup,
+                                                   disable_web_page_preview=True)
+            except: pass
 
 async def del_msg(q):
     try: await q.message.delete()
@@ -2030,7 +2061,7 @@ async def send_nasa_image(q, ctx, queries, cb=""):
         if q_term in tried: continue
         tried.add(q_term)
         try:
-            r = requests.get("https://images-api.nasa.gov/search",
+            r = await aget("https://images-api.nasa.gov/search",
                 params={"q": q_term, "media_type": "image", "page_size": 40},
                 headers=nasa_headers, timeout=12)
             r.raise_for_status()
@@ -2109,7 +2140,7 @@ async def setlang_h(update, ctx):
 async def _send_apod(q, ctx, params=None):
     lang = get_lang(ctx)
     try:
-        data    = nasa_req("/planetary/apod", params)
+        data    = await anasa_req("/planetary/apod", params)
         title   = data.get("title", "")
         expl    = strip_html(data.get("explanation", ""))[:900]
         url     = data.get("url", "").replace("http://","https://")
@@ -2140,7 +2171,7 @@ async def _send_apod(q, ctx, params=None):
             await ctx.bot.send_message(chat_id=q.message.chat_id,
                 text=caption[:4096] + f"\n\n[▶️]({url})", parse_mode="Markdown", reply_markup=kb)
     except Exception as e:
-        await safe_edit(q, f"{tx(lang,'err')} APOD: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
+        await safe_edit(q, f"{tx(lang,'err')} APOD: `{safe_err(e)}`", reply_markup=back_kb(lang, ctx=ctx))
 
 async def apod_h(update, ctx):
     q = update.callback_query; await safe_answer(q); await safe_edit(q, "⏳...")
@@ -2163,7 +2194,7 @@ async def mars_h(update, ctx):
         photos = []
         for sol in random.sample([100, 200, 300, 500, 750, 1000, 1200, 1500], 4):
             try:
-                r = requests.get(f"{NASA_BASE}/mars-photos/api/v1/rovers/curiosity/photos",
+                r = await aget(f"{NASA_BASE}/mars-photos/api/v1/rovers/curiosity/photos",
                     params={"sol": sol, "api_key": NASA_API_KEY, "page": 1}, timeout=10)
                 if r.status_code == 200:
                     photos = r.json().get("photos", [])
@@ -2200,7 +2231,7 @@ async def mars_rovers_h(update, ctx):
         # PRIMARY: use latest_photos endpoint — always has data, no guessing sol numbers
         for rv in [rover] + [r for r in ROVER_NAMES if r != rover]:
             try:
-                r = requests.get(
+                r = await aget(
                     f"{NASA_BASE}/mars-photos/api/v1/rovers/{rv}/latest_photos",
                     params={"api_key": NASA_API_KEY}, timeout=12
                 )
@@ -2236,7 +2267,7 @@ async def mars_rovers_h(update, ctx):
         )
     except Exception as e:
         logger.error(f"mars_rovers_h: {e}")
-        await safe_edit(q, f"{tx(lang,'err')}: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
+        await safe_edit(q, f"{tx(lang,'err')}: `{safe_err(e)}`", reply_markup=back_kb(lang, ctx=ctx))
 # ── End: MARS ROVERS GALLERY HANDLER ─────────────────────────────────────────
 
 
@@ -2247,7 +2278,7 @@ async def asteroids_h(update, ctx):
     q = update.callback_query; await safe_answer(q); lang = get_lang(ctx); await safe_edit(q, "☄️...")
     try:
         today = date.today().isoformat()
-        data  = nasa_req("/neo/rest/v1/feed", {"start_date": today, "end_date": today})
+        data  = await anasa_req("/neo/rest/v1/feed", {"start_date": today, "end_date": today})
         neos  = data["near_earth_objects"].get(today, [])
         if not neos:
             await safe_edit(q, tx(lang, "no_data"), reply_markup=back_kb(lang, "asteroids", ctx)); return
@@ -2273,7 +2304,7 @@ async def asteroids_h(update, ctx):
         ast_imgs = ["asteroid close up nasa dawn", "asteroid bennu osiris rex nasa",
                     "asteroid ryugu hayabusa", "near earth asteroid space"]
         try:
-            ri = requests.get("https://images-api.nasa.gov/search",
+            ri = await aget("https://images-api.nasa.gov/search",
                 params={"q": random.choice(ast_imgs), "media_type": "image", "page_size": 20}, timeout=10)
             items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
             if items:
@@ -2287,7 +2318,7 @@ async def asteroids_h(update, ctx):
         except: pass
         await safe_edit(q, text[:4096], reply_markup=back_kb(lang, "asteroids", ctx))
     except Exception as e:
-        await safe_edit(q, f"{tx(lang,'err')}: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
+        await safe_edit(q, f"{tx(lang,'err')}: `{safe_err(e)}`", reply_markup=back_kb(lang, ctx=ctx))
 # ── End: ASTEROIDS HANDLER ────────────────────────────────────────────────────
 
 
@@ -2307,7 +2338,7 @@ async def iss_h(update, ctx):
         iss_images = ["ISS international space station orbit", "ISS from earth telescope",
                       "space station earth view"]
         try:
-            r = requests.get("https://images-api.nasa.gov/search",
+            r = await aget("https://images-api.nasa.gov/search",
                 params={"q": random.choice(iss_images), "media_type": "image", "page_size": 20},
                 timeout=12)
             items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
@@ -2322,7 +2353,7 @@ async def iss_h(update, ctx):
         except: pass
         await safe_edit(q, text[:4096], reply_markup=back_kb(lang, "iss", ctx))
     except Exception as e:
-        await safe_edit(q, f"{tx(lang,'err')} ISS: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
+        await safe_edit(q, f"{tx(lang,'err')} ISS: `{safe_err(e)}`", reply_markup=back_kb(lang, ctx=ctx))
 # ── End: ISS HANDLER ──────────────────────────────────────────────────────────
 
 
@@ -2343,7 +2374,7 @@ async def exoplanets_h(update, ctx):
                 "Kepler exoplanet nasa", "habitable zone planet artist",
                 "James Webb exoplanet atmosphere"]
     try:
-        r = requests.get("https://images-api.nasa.gov/search",
+        r = await aget("https://images-api.nasa.gov/search",
             params={"q": random.choice(exo_imgs), "media_type": "image", "page_size": 20}, timeout=12)
         items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
@@ -2367,7 +2398,7 @@ async def spaceweather_h(update, ctx):
     try:
         kp_val, kp_time, kp_state = "?", "?", "?"
         try:
-            r = requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json", timeout=10)
+            r = await aget("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json", timeout=10)
             r.raise_for_status()
             kp_data = r.json(); cur = kp_data[-1] if kp_data else {}
             kp_val  = cur.get("kp_index", cur.get("Kp", "?"))
@@ -2380,7 +2411,7 @@ async def spaceweather_h(update, ctx):
         except: pass
         sw_speed, sw_density = "?", "?"
         try:
-            r2 = requests.get("https://services.swpc.noaa.gov/products/solar-wind/plasma-5-minute.json", timeout=10)
+            r2 = await aget("https://services.swpc.noaa.gov/products/solar-wind/plasma-5-minute.json", timeout=10)
             r2.raise_for_status()
             sw_data = r2.json(); sw_lat = sw_data[-1] if sw_data else []
             if len(sw_lat) > 2:
@@ -2391,7 +2422,7 @@ async def spaceweather_h(update, ctx):
         except: pass
         flare_cls, flare_flux = "?", "?"
         try:
-            r3 = requests.get("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json", timeout=10)
+            r3 = await aget("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json", timeout=10)
             r3.raise_for_status()
             xray = r3.json(); xl = xray[-1] if xray else {}; flux = xl.get("flux", "?")
             try:
@@ -2403,7 +2434,7 @@ async def spaceweather_h(update, ctx):
         except: pass
         ssn = "?"
         try:
-            r4 = requests.get("https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json", timeout=10)
+            r4 = await aget("https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json", timeout=10)
             r4.raise_for_status(); sc = r4.json()
             ssn = sc[-1].get("smoothed_ssn", sc[-1].get("ssn", "?")) if sc else "?"
         except: pass
@@ -2428,7 +2459,7 @@ async def spaceweather_h(update, ctx):
         except: pass
         await safe_edit(q, text[:4096], reply_markup=back_kb(lang, "spaceweather", ctx))
     except Exception as e:
-        await safe_edit(q, f"{tx(lang,'err')}: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
+        await safe_edit(q, f"{tx(lang,'err')}: `{safe_err(e)}`", reply_markup=back_kb(lang, ctx=ctx))
 # ── End: SPACE WEATHER HANDLER ────────────────────────────────────────────────
 
 
@@ -2442,7 +2473,7 @@ async def launches_h(update, ctx):
         if not launches:
             # Primary: RocketLaunch.Live — free, no rate limit
             try:
-                rll = requests.get(
+                rll = await aget(
                     "https://fdo.rocketlaunch.live/json/launches/next/5",
                     timeout=12, headers={"User-Agent": "NASASpaceBot/2.0"})
                 if rll.status_code == 200:
@@ -2496,7 +2527,7 @@ async def launches_h(update, ctx):
         launch_imgs = ["rocket launch nasa", "SpaceX falcon launch pad", "rocket liftoff pad exhaust",
                        "space launch vehicle liftoff", "falcon 9 launch"]
         try:
-            ri = requests.get("https://images-api.nasa.gov/search",
+            ri = await aget("https://images-api.nasa.gov/search",
                 params={"q": random.choice(launch_imgs), "media_type": "image", "page_size": 20}, timeout=10)
             items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
             if items:
@@ -2510,7 +2541,7 @@ async def launches_h(update, ctx):
         except: pass
         await safe_edit(q, text[:4096], reply_markup=back_kb(lang, "launches", ctx))
     except Exception as e:
-        await safe_edit(q, f"{tx(lang,'err')}: `{e}`", reply_markup=back_kb(lang, ctx=ctx))
+        await safe_edit(q, f"{tx(lang,'err')}: `{safe_err(e)}`", reply_markup=back_kb(lang, ctx=ctx))
 # ── End: LAUNCHES HANDLER ─────────────────────────────────────────────────────
 
 
@@ -2526,7 +2557,7 @@ async def satellites_h(update, ctx):
         try:
             # Primary: CelesTrak SATCAT for quick Starlink count (very fast, reliable)
             try:
-                r_ct = requests.get(
+                r_ct = await aget(
                     "https://celestrak.org/pub/satcat.csv",
                     timeout=10, headers={"User-Agent":"NASASpaceBot/2.0"},
                     stream=True
@@ -2543,7 +2574,7 @@ async def satellites_h(update, ctx):
             except Exception as _ct_e:
                 logger.debug(f"CelesTrak: {_ct_e}")
                 # Fallback: SpaceX API (may be slow)
-                r_sl = requests.get(
+                r_sl = await aget(
                     "https://api.spacexdata.com/v5/starlink?limit=9999",
                     timeout=25, headers={"User-Agent": "NASASpaceBot/2.0"})
                 r_sl.raise_for_status()
@@ -2557,7 +2588,7 @@ async def satellites_h(update, ctx):
     sat_imgs = ["satellite orbit earth nasa", "starlink constellation night sky",
                 "GPS satellite earth orbit", "communication satellite deployment space"]
     try:
-        ri = requests.get("https://images-api.nasa.gov/search",
+        ri = await aget("https://images-api.nasa.gov/search",
             params={"q": random.choice(sat_imgs), "media_type": "image", "page_size": 20}, timeout=10)
         items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
@@ -2586,7 +2617,7 @@ async def meteors_h(update, ctx):
     meteor_imgs = ["meteor shower long exposure night sky", "perseid meteor shower",
                    "shooting star night sky nasa", "leonids meteor shower", "geminids fireball"]
     try:
-        r = requests.get("https://images-api.nasa.gov/search",
+        r = await aget("https://images-api.nasa.gov/search",
             params={"q": random.choice(meteor_imgs), "media_type": "image", "page_size": 20}, timeout=12)
         items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
@@ -2624,7 +2655,7 @@ async def planets_h(update, ctx):
     }
     queries = planet_queries.get(p["name"], ["solar system planet nasa"])
     try:
-        r = requests.get("https://images-api.nasa.gov/search",
+        r = await aget("https://images-api.nasa.gov/search",
             params={"q": random.choice(queries), "media_type": "image", "page_size": 20}, timeout=12)
         items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
@@ -2656,7 +2687,7 @@ async def moon_h(update, ctx):
     moon_images = ["moon surface nasa apollo", "lunar crater full moon",
                    "moon high resolution nasa", "moon from space ISS", "lunar surface close up"]
     try:
-        r = requests.get("https://images-api.nasa.gov/search",
+        r = await aget("https://images-api.nasa.gov/search",
             params={"q": random.choice(moon_images), "media_type": "image", "page_size": 20}, timeout=12)
         items = [it for it in r.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
@@ -2682,7 +2713,7 @@ async def telescopes_h(update, ctx):
                 "Chandra X-ray telescope", "very large telescope ESO",
                 "telescope mirror primary hexagonal", "space observatory nasa"]
     try:
-        ri = requests.get("https://images-api.nasa.gov/search",
+        ri = await aget("https://images-api.nasa.gov/search",
             params={"q": random.choice(tel_imgs), "media_type": "image", "page_size": 20}, timeout=10)
         items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
@@ -2708,7 +2739,7 @@ async def spacefact_h(update, ctx):
     fact_imgs = ["space stars galaxy nasa", "universe deep field", "cosmos stars milky way",
                  "nebula colorful nasa hubble", "star formation space", "galaxy spiral nasa"]
     try:
-        ri = requests.get("https://images-api.nasa.gov/search",
+        ri = await aget("https://images-api.nasa.gov/search",
             params={"q": random.choice(fact_imgs), "media_type": "image", "page_size": 20}, timeout=10)
         items = [it for it in ri.json().get("collection", {}).get("items", []) if it.get("links")]
         if items:
@@ -2735,7 +2766,7 @@ async def channels_h(update, ctx):
 async def live_solar_wind_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
     try:
-        r=requests.get("https://services.swpc.noaa.gov/products/solar-wind/plasma-5-minute.json",timeout=12); r.raise_for_status()
+        r=await aget("https://services.swpc.noaa.gov/products/solar-wind/plasma-5-minute.json",timeout=12); r.raise_for_status()
         data=r.json(); latest=data[-1] if data else {}
         speed=latest[2] if len(latest)>2 else "?"; density=latest[1] if len(latest)>1 else "?"
         time_str=str(latest[0])[:16].replace("T"," ") if latest else "?"
@@ -2748,12 +2779,12 @@ async def live_solar_wind_h(update, ctx):
         await safe_edit(q,f"{tx(lang,'live_solar_wind_title')}\n⏱ {time_str} UTC\n\n{status}\n🚀 {speed}  |  🔵 {density}\n\n[NOAA](https://www.swpc.noaa.gov)",
             reply_markup=back_kb(lang,"live_solar_wind",ctx))
     except Exception as e:
-        await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q,f"{tx(lang,'err')}: `{safe_err(e)}`",reply_markup=back_kb(lang,ctx=ctx))
 
 async def live_kp_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
     try:
-        r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=12); r.raise_for_status()
+        r=await aget("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=12); r.raise_for_status()
         data=r.json(); current=data[-1] if data else {}
         kp_now=current.get("kp_index",current.get("Kp","?")); time_=current.get("time_tag","")[:16].replace("T"," ")
         try:
@@ -2764,12 +2795,12 @@ async def live_kp_h(update, ctx):
         await safe_edit(q,f"{tx(lang,'live_kp_title')}\n⏱ {time_} UTC\n\nKp: *{kp_now}*  |  {state}\n🌈 Aurora: {aurora}",
             reply_markup=back_kb(lang,"live_kp",ctx))
     except Exception as e:
-        await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q,f"{tx(lang,'err')}: `{safe_err(e)}`",reply_markup=back_kb(lang,ctx=ctx))
 
 async def live_flares_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
     try:
-        r=requests.get("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",timeout=12); r.raise_for_status()
+        r=await aget("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",timeout=12); r.raise_for_status()
         xray=r.json(); latest=xray[-1] if xray else {}
         flux=latest.get("flux","?"); time_=latest.get("time_tag","")[:16].replace("T"," ")
         try:
@@ -2780,7 +2811,7 @@ async def live_flares_h(update, ctx):
         await safe_edit(q,f"{tx(lang,'live_flares_title')}\n⏱ {time_} UTC\n\n⚡ *{cls_}* — `{fs}`",
             reply_markup=back_kb(lang,"live_flares",ctx))
     except Exception as e:
-        await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q,f"{tx(lang,'err')}: `{safe_err(e)}`",reply_markup=back_kb(lang,ctx=ctx))
 
 async def live_iss_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
@@ -2793,12 +2824,12 @@ async def live_iss_h(update, ctx):
               f"[{tx(lang,'iss_map')}](https://www.google.com/maps?q={lat},{lon})")
         await safe_edit(q,text,reply_markup=back_kb(lang,"live_iss",ctx))
     except Exception as e:
-        await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q,f"{tx(lang,'err')}: `{safe_err(e)}`",reply_markup=back_kb(lang,ctx=ctx))
 
 async def live_radiation_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
     try:
-        r=requests.get("https://services.swpc.noaa.gov/json/goes/primary/integral-protons-6-hour.json",timeout=12); r.raise_for_status()
+        r=await aget("https://services.swpc.noaa.gov/json/goes/primary/integral-protons-6-hour.json",timeout=12); r.raise_for_status()
         protons=r.json(); latest=protons[-1] if protons else {}
         flux_p=latest.get("flux","?"); time_p=latest.get("time_tag","")[:16].replace("T"," ")
         try:
@@ -2809,12 +2840,12 @@ async def live_radiation_h(update, ctx):
         await safe_edit(q,f"{tx(lang,'live_radiation_title')}\n⏱ {time_p} UTC\n\n☢️ `{fs}`\n🌡 *{rl}*",
             reply_markup=back_kb(lang,"live_radiation",ctx))
     except Exception as e:
-        await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q,f"{tx(lang,'err')}: `{safe_err(e)}`",reply_markup=back_kb(lang,ctx=ctx))
 
 async def live_aurora_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
     try:
-        r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=12); r.raise_for_status()
+        r=await aget("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=12); r.raise_for_status()
         data=r.json(); current=data[-1] if data else {}
         kp=current.get("kp_index",current.get("Kp","?")); time_=current.get("time_tag","")[:16].replace("T"," ")
         try:
@@ -2824,13 +2855,13 @@ async def live_aurora_h(update, ctx):
         await safe_edit(q,f"{tx(lang,'live_aurora_title')}\n⏱ {time_} UTC\n\nKp: *{kp}*\n{forecast}",
             reply_markup=back_kb(lang,"live_aurora_forecast",ctx))
     except Exception as e:
-        await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q,f"{tx(lang,'err')}: `{safe_err(e)}`",reply_markup=back_kb(lang,ctx=ctx))
 
 async def live_geomag_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
     try:
         end=date.today().isoformat(); start=(date.today()-timedelta(days=2)).isoformat()
-        raw_storms=nasa_req("/DONKI/GST",{"startDate":start,"endDate":end}); storms=(raw_storms if isinstance(raw_storms,list) else []) 
+        raw_storms=await anasa_req("/DONKI/GST",{"startDate":start,"endDate":end}); storms=(raw_storms if isinstance(raw_storms,list) else []) 
         text=f"{tx(lang,'live_geomag_title')}\n\n{tx(lang,'geomag_events')} *{len(storms)}*\n\n"
         for s in (storms[-5:] if storms else []):
             t=(s.get("startTime") or "?")[:16].replace("T"," ")
@@ -2839,12 +2870,12 @@ async def live_geomag_h(update, ctx):
         if not storms: text+=tx(lang,"live_nodata")
         await safe_edit(q,text[:4096],reply_markup=back_kb(lang,"live_geomagnetic_alert",ctx))
     except Exception as e:
-        await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q,f"{tx(lang,'err')}: `{safe_err(e)}`",reply_markup=back_kb(lang,ctx=ctx))
 
 async def live_sunspot_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
     try:
-        r=requests.get("https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json",timeout=12); r.raise_for_status()
+        r=await aget("https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json",timeout=12); r.raise_for_status()
         data=r.json(); latest=data[-1] if data else {}
         # NOAA key changed: try multiple field names
         ssn=latest.get("smoothed_ssn") or latest.get("ssn") or latest.get("SSN") or latest.get("SMOOTHED_SSN") or "?"
@@ -2853,12 +2884,12 @@ async def live_sunspot_h(update, ctx):
         await safe_edit(q,f"{tx(lang,'live_sunspot_title')}\n\n{tx(lang,'live_sunspot_text',ssn=ssn)}",
             reply_markup=back_kb(lang,"live_sunspot",ctx))
     except Exception as e:
-        await safe_edit(q,f"{tx(lang,'err')}: `{e}`",reply_markup=back_kb(lang,ctx=ctx))
+        await safe_edit(q,f"{tx(lang,'err')}: `{safe_err(e)}`",reply_markup=back_kb(lang,ctx=ctx))
 
 async def live_epic_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🔴...")
     try:
-        data=nasa_req("/EPIC/api/natural")
+        data=await anasa_req("/EPIC/api/natural")
         if not data:
             await safe_edit(q,tx(lang,"no_img"),reply_markup=back_kb(lang,ctx=ctx)); return
         item=data[0]; date_raw=item.get("date","")[:10]; date_str=date_raw.replace("-","/"); img=item.get("image","")
@@ -2885,7 +2916,7 @@ async def live_sat_count_h(update, ctx):
         else:
             # Fast: CelesTrak SATCAT CSV — parse Starlink lines only
             try:
-                r_ct=requests.get("https://celestrak.org/pub/satcat.csv",
+                r_ct=await aget("https://celestrak.org/pub/satcat.csv",
                     timeout=12, headers={"User-Agent":"NASASpaceBot/2.0"}, stream=True)
                 if r_ct.status_code==200:
                     lines_ct=r_ct.text.split("\n")
@@ -2902,7 +2933,7 @@ async def live_sat_count_h(update, ctx):
                 pass
             if total=="?":
                 # Fallback: SpaceX API
-                r_sl=requests.get("https://api.spacexdata.com/v5/starlink?limit=9999",
+                r_sl=await aget("https://api.spacexdata.com/v5/starlink?limit=9999",
                     timeout=25, headers={"User-Agent":"NASASpaceBot/2.0"})
                 r_sl.raise_for_status(); sl=r_sl.json()
                 if isinstance(sl,list):
@@ -3078,7 +3109,7 @@ async def quiz_next_h(update, ctx):
     q_text=question["q"].get(lang,question["q"]["en"])
     opts_txt="\n".join(f"{chr(65+i)}. {opt}" for i,opt in enumerate(question["options"]))
     ctx.user_data["quiz_answered"]=False
-    await safe_edit(q,f"{tx(lang,'quiz_question_title',n=qi+1)}\n\n{q_text}\n\n{opts_txt}",reply_markup=quiz_kb(lang,qi))
+    await safe_edit(q,(f"{tx(lang,'quiz_question_title',n=qi+1)}\n\n{q_text}\n\n{opts_txt}")[:4096],reply_markup=quiz_kb(lang,qi))
 
 async def quiz_answer_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx)
@@ -3145,7 +3176,7 @@ async def mars_rover_live_h(update, ctx):
     text=tx(lang,"mars_rover_title")
     for rover in ["perseverance","curiosity"]:
         try:
-            r=requests.get(f"{NASA_BASE}/mars-photos/api/v1/manifests/{rover}",params={"api_key":NASA_API_KEY},timeout=10)
+            r=await aget(f"{NASA_BASE}/mars-photos/api/v1/manifests/{rover}",params={"api_key":NASA_API_KEY},timeout=10)
             if r.status_code==200:
                 m=r.json().get("photo_manifest",{})
                 status_e=tx(lang,"rover_active") if m.get("status")=="active" else tx(lang,"rover_inactive")
@@ -3185,7 +3216,7 @@ async def _show_news_article(q, ctx, lang, source_key, idx):
     src = NEWS_SOURCES.get(source_key, {})
     articles = rss_cache_get(source_key)
     if not articles:
-        articles = fetch_rss(source_key, max_items=30)
+        articles = await async_fetch_rss(source_key, max_items=30)
         if articles:
             rss_cache_set(source_key, articles)
     if not articles:
@@ -3241,7 +3272,7 @@ async def news_source_h(update, ctx, source_key):
     await safe_edit(q, tx(lang,"news_loading"))
     seen_key = f"news_seen_{source_key}"
     seen = ctx.user_data.get(seen_key, set())
-    articles = rss_cache_get(source_key) or fetch_rss(source_key, 30)
+    articles = rss_cache_get(source_key) or await async_fetch_rss(source_key, 30)
     if articles: rss_cache_set(source_key, articles)
     start_idx = 0
     if articles:
@@ -3293,7 +3324,7 @@ async def job_asteroid_alert(context):
     if not chat_ids: return
     try:
         today=date.today().isoformat()
-        data=nasa_req("/neo/rest/v1/feed",{"start_date":today,"end_date":today})
+        data=await anasa_req("/neo/rest/v1/feed",{"start_date":today,"end_date":today})
         neos=data["near_earth_objects"].get(today,[])
         danger=[a for a in neos if a["is_potentially_hazardous_asteroid"]]
         if not danger: return
@@ -3334,7 +3365,7 @@ async def job_space_weather_alert(context):
     subs=load_subscribers(); chat_ids=subs.get("space_weather",[])
     if not chat_ids: return
     try:
-        r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=12); r.raise_for_status()
+        r=await aget("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=12); r.raise_for_status()
         data=r.json()
         recent=[float(d.get("kp_index",d.get("Kp",0))) for d in data[-5:] if d]
         kp_max=max(recent) if recent else 0
@@ -3895,7 +3926,7 @@ async def sat_detail_h(update, ctx):
             pos_text=f"\n📍 Orbit: {sat['alt_km']:,} km from Earth (deep space — no live tracking)"
         else:
             # LEO satellites: try wheretheiss.at (supports any NORAD ID)
-            r=requests.get(f"https://api.wheretheiss.at/v1/satellites/{sat['norad']}",timeout=10)
+            r=await aget(f"https://api.wheretheiss.at/v1/satellites/{sat['norad']}",timeout=10)
             r.raise_for_status()
             d=r.json()
             lat=d.get("latitude",0); lon=d.get("longitude",0)
@@ -3919,14 +3950,14 @@ async def sat_detail_h(update, ctx):
 async def earthquakes_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🌍...")
     try:
-        r=requests.get("https://eonet.gsfc.nasa.gov/api/v3/events?category=earthquakes&limit=10&status=open&days=7",timeout=12)
+        r=await aget("https://eonet.gsfc.nasa.gov/api/v3/events?category=earthquakes&limit=10&status=open&days=7",timeout=12)
         r.raise_for_status(); events=r.json().get("events",[])
     except:
         events=[]
     if not events:
         # Fallback: USGS
         try:
-            r=requests.get("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/5.0_week.geojson",timeout=12)
+            r=await aget("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/5.0_week.geojson",timeout=12)
             feats=r.json().get("features",[])[:8]
             lines=[tx(lang,"eq_title_usgs")+"\n"]
             for f in feats:
@@ -3954,7 +3985,7 @@ async def job_earthquake_alert(context):
     subs=load_subscribers(); chat_ids=subs.get("earthquakes",[])
     if not chat_ids: return
     try:
-        r=requests.get("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/6.0_day.geojson",timeout=12)
+        r=await aget("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/6.0_day.geojson",timeout=12)
         feats=r.json().get("features",[])
         if not feats: return
         msg="🚨 *Earthquake Alert M≥6.0!*\n\n"
@@ -3978,7 +4009,7 @@ async def spaceweather_digest_h(update, ctx):
 
     # 1. Kp index — NOAA 1-minute Kp JSON
     try:
-        r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",
+        r=await aget("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",
                         timeout=12, headers={"User-Agent":"NASASpaceBot/2.0"})
         r.raise_for_status()
         rows = [x for x in r.json() if isinstance(x, dict)]
@@ -3994,7 +4025,7 @@ async def spaceweather_digest_h(update, ctx):
 
     # 2. Solar wind speed — column index 2 = bulk_speed
     try:
-        r=requests.get("https://services.swpc.noaa.gov/products/solar-wind/plasma-5-minute.json",
+        r=await aget("https://services.swpc.noaa.gov/products/solar-wind/plasma-5-minute.json",
                         timeout=12, headers={"User-Agent":"NASASpaceBot/2.0"})
         r.raise_for_status()
         rows=[x for x in r.json() if isinstance(x,list) and len(x)>=3 and x[0] != "time_tag"]
@@ -4006,7 +4037,7 @@ async def spaceweather_digest_h(update, ctx):
 
     # 3. X-ray flux — GOES primary
     try:
-        r=requests.get("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",
+        r=await aget("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json",
                         timeout=12, headers={"User-Agent":"NASASpaceBot/2.0"})
         r.raise_for_status()
         entries = [x for x in r.json() if isinstance(x,dict)]
@@ -4022,7 +4053,7 @@ async def spaceweather_digest_h(update, ctx):
 
     # 4. Geomagnetic storm status
     try:
-        r=requests.get("https://services.swpc.noaa.gov/products/noaa-alerts.json",
+        r=await aget("https://services.swpc.noaa.gov/products/noaa-alerts.json",
                         timeout=10, headers={"User-Agent":"NASASpaceBot/2.0"})
         if r.ok:
             alerts_text = r.text[:500]
@@ -4050,7 +4081,7 @@ async def job_spaceweather_digest(context):
     if not chat_ids: return
     try:
         sections=[]
-        r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=10)
+        r=await aget("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=10)
         kp=float(r.json()[-1].get("kp_index",0))
         sections.append(f"🌡 Kp: {kp:.1f}"); sections.append(f"📅 {date.today().strftime('%d %b')}")
         msg="☀️ *Daily Space Weather*\n\n"+"\n".join(sections)
@@ -4068,7 +4099,7 @@ async def exoplanet_alert_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,tx(lang,"exo_loading"))
     try:
         # NASA Exoplanet Archive — confirmed planets in the last 30 days
-        r=requests.get(
+        r=await aget(
             "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+pl_name,disc_year,discoverymethod,pl_orbper,pl_rade,st_dist+from+pscomppars+where+disc_year>=2023+order+by+rowupdate+desc&format=json&maxrec=20",
             timeout=15)
         planets=r.json() if r.status_code==200 else []
@@ -4095,7 +4126,7 @@ async def job_exoplanet_alert(context):
     subs=load_subscribers(); chat_ids=subs.get("exoplanets",[])
     if not chat_ids: return
     try:
-        r=requests.get("https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+pl_name,discoverymethod+from+pscomppars+where+disc_year>=2023+order+by+rowupdate+desc&format=json&maxrec=5",timeout=15)
+        r=await aget("https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+pl_name,discoverymethod+from+pscomppars+where+disc_year>=2023+order+by+rowupdate+desc&format=json&maxrec=5",timeout=15)
         planets=r.json() if r.status_code==200 else []
         if not planets: return
         msg="🔭 *New Exoplanet Discoveries This Week!*\n\n"
@@ -4132,7 +4163,7 @@ async def daily_horoscope_h(update, ctx):
     # Get live Kp
     kp=0.0
     try:
-        r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=10)
+        r=await aget("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=10)
         kp=float(r.json()[-1].get("kp_index",r.json()[-1].get("Kp",0)))
     except: pass
     # Moon
@@ -4586,14 +4617,14 @@ async def smart_set_eq_start(update, ctx):
     ctx.user_data["smart_lang"]=lang
     await del_msg(q)
     await ctx.bot.send_message(q.message.chat_id,tx(lang,"smart_eq_ask"),parse_mode="Markdown")
-    return SMART_KP  # reuse same state
+    return SMART_EQ
 
 async def smart_eq_received(update, ctx):
     lang=ctx.user_data.get("smart_lang","en")
     try:
         val=float(update.message.text.strip()); assert 4<=val<=9
     except:
-        await update.message.reply_text(tx(lang,"smart_eq_err")); return SMART_KP
+        await update.message.reply_text(tx(lang,"smart_eq_err")); return SMART_EQ
     cid=str(update.effective_chat.id); alerts=load_smart_alerts()
     if cid not in alerts: alerts[cid]={}
     alerts[cid]["earthquake_min"]=val; save_smart_alerts(alerts)
@@ -4611,14 +4642,14 @@ async def job_smart_alerts_check(context):
     if not alerts: return
     # Get Kp
     try:
-        r=requests.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=10)
+        r=await aget("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",timeout=10)
         kp=float(r.json()[-1].get("kp_index",0))
     except: kp=0
     # Get asteroid
     today=date.today().isoformat()
     neo_danger=[]
     try:
-        data=nasa_req("/neo/rest/v1/feed",{"start_date":today,"end_date":today})
+        data=await anasa_req("/neo/rest/v1/feed",{"start_date":today,"end_date":today})
         neos=data["near_earth_objects"].get(today,[])
         for a in neos:
             ap=a["close_approach_data"][0] if a["close_approach_data"] else {}
@@ -4700,7 +4731,7 @@ async def iss_city_received(update, ctx):
     if not match:
         # Try geocoding via Nominatim
         try:
-            r=requests.get(f"https://nominatim.openstreetmap.org/search?q={city_input}&format=json&limit=1",
+            r=await aget(f"https://nominatim.openstreetmap.org/search?q={city_input}&format=json&limit=1",
                 headers={"User-Agent":"NASASpaceBot/2.0"},timeout=8)
             res=r.json()
             if res:
@@ -4723,7 +4754,7 @@ async def iss_city_received(update, ctx):
             f"&apiKey={n2yo_key}" if n2yo_key else
             f"https://api.n2yo.com/rest/v1/satellite/visualpasses/25544/{lat}/{lon}/0/5/300/"
         )
-        r_n2 = requests.get(n2yo_url, timeout=10, headers={"User-Agent":"NASASpaceBot/2.0"})
+        r_n2 = await aget(n2yo_url, timeout=10, headers={"User-Agent":"NASASpaceBot/2.0"})
         if r_n2.status_code == 200:
             n2_data = r_n2.json()
             for p in (n2_data.get("passes") or [])[:5]:
@@ -4766,7 +4797,7 @@ async def iss_city_cancel(update, ctx):
 async def meteorite_map_h(update, ctx):
     q=update.callback_query; await safe_answer(q); lang=get_lang(ctx); await safe_edit(q,"🗺 Loading...")
     try:
-        r=requests.get("https://data.nasa.gov/resource/gh4g-9sfh.json?$limit=2000&$order=mass+DESC",timeout=15)
+        r=await aget("https://data.nasa.gov/resource/gh4g-9sfh.json?$limit=2000&$order=mass+DESC",timeout=15)
         r.raise_for_status(); data=r.json()[:10]
         lines=[tx(lang,"meteor_map_title")+"\n"]
         for m in data:
@@ -4934,7 +4965,7 @@ async def job_earth_fact(context):
     subs=load_subscribers(); chat_ids=subs.get("earth_fact",[])
     if not chat_ids: return
     try:
-        data=nasa_req("/EPIC/api/natural")
+        data=await anasa_req("/EPIC/api/natural")
         if data:
             item=data[0]; date_str=item.get("date","")[:10].replace("-","/")
             img_name=item.get("image",""); url=f"https://epic.gsfc.nasa.gov/archive/natural/{date_str}/png/{img_name}.png"
@@ -5052,7 +5083,7 @@ def get_new_conv_handlers():
     )
     smart_eq_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(smart_set_eq_start,pattern="^smart_set_eq$")],
-        states={SMART_KP:[MessageHandler(filters.TEXT & ~filters.COMMAND,smart_eq_received)]},
+        states={SMART_EQ:[MessageHandler(filters.TEXT & ~filters.COMMAND,smart_eq_received)]},
         fallbacks=[CommandHandler("cancel",smart_cancel)], allow_reentry=True,
     )
     return [qa_conv, iss_vis_conv, rocket_conv, smart_kp_conv, smart_ld_conv, smart_eq_conv]
